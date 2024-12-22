@@ -44,7 +44,7 @@ namespace fheprac
 	{
 		const uint64_t l = context_.level();
 		const uint64_t d = context_.poly_modulus_degree();
-		const uint64_t p = context_.plain_modulus_value();
+		const int64_t p = static_cast<int64_t>(context_.plain_modulus_value());
 
 		std::vector<std::vector<Eigen::Vector<int64_t, Eigen::Dynamic>>> pk(
 			l + 1, std::vector<Eigen::Vector<int64_t, Eigen::Dynamic>>(2, Eigen::Vector<int64_t, Eigen::Dynamic>(d)));
@@ -61,7 +61,7 @@ namespace fheprac
 
 			for (uint64_t i = 0; i < d; i++)
 			{
-				B[i] = static_cast<int64_t>(param.value_from_uniform_dist());
+				B[i] = static_cast<int64_t>(context_.value_from_gaussian_dist()); //static_cast<int64_t>(param.value_from_uniform_dist());
 				e[i] = static_cast<int64_t>(context_.value_from_gaussian_dist());
 			}
 
@@ -74,8 +74,8 @@ namespace fheprac
 			mod(b, q);
 
 			pk[j][0] = b;
-			pk[j][1] = B;
-			negate(pk[j][1], q);
+			pk[j][1] = -B;
+			//negate(pk[j][1], q);
 
 			/*std::vector<Eigen::Vector<int64_t, Eigen::Dynamic>> A = pk[j];
 			std::vector<Eigen::Vector<int64_t, Eigen::Dynamic>> s = secret_key.key(j);

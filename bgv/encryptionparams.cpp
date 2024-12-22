@@ -2,7 +2,7 @@
 
 namespace fheprac
 {
-	EncryptionParameters::EncryptionParameters(uint64_t q, uint64_t l, uint64_t next_index) :q_(q), l_(l), next_param_index_(next_index) 
+	EncryptionParameters::EncryptionParameters(uint64_t q, uint64_t l, uint64_t next_index) :q_(q), l_(l), next_param_index_(next_index)
 	{
 		// 균등 분포 [0, q-1] 정수
 		std::random_device rd;
@@ -15,12 +15,12 @@ namespace fheprac
 		return next_param_index_;
 	}
 
-	uint64_t EncryptionParameters::q() const
+	uint64_t& EncryptionParameters::q()
 	{
 		return q_;
 	}
 
-	uint64_t EncryptionParameters::l() const
+	uint64_t& EncryptionParameters::l()
 	{
 		return l_;
 	}

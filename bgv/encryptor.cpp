@@ -9,12 +9,12 @@ namespace fheprac
 
 	void Encryptor::encrypt(Plaintext& plaintext, Ciphertext& destination)
 	{
-		const EncryptionParameters param = context_.first_param();
+		EncryptionParameters param = context_.first_param();
 
 		const uint64_t l = context_.level();
 		const uint64_t d = context_.poly_modulus_degree();
-		const uint64_t p = context_.plain_modulus_value();
-		const uint64_t q = param.q();
+		const int64_t p = static_cast<int64_t>(context_.plain_modulus_value());
+		const int64_t q = static_cast<int64_t>(param.q());
 
 
 		destination.assign(2, d);
@@ -29,8 +29,8 @@ namespace fheprac
 			m[0][i] = plaintext[i] % q;
 			m[1][i] = static_cast<int64_t>(0);
 
-			e[0][i] = (static_cast<int64_t>(p) * static_cast<int64_t>(context_.value_from_gaussian_dist())) % static_cast<int64_t>(q);
-			e[1][i] = (static_cast<int64_t>(p) * static_cast<int64_t>(context_.value_from_gaussian_dist())) % static_cast<int64_t>(q);
+			e[0][i] = (p * static_cast<int64_t>(context_.value_from_gaussian_dist())) % q;
+			e[1][i] = (p * static_cast<int64_t>(context_.value_from_gaussian_dist())) % q;
 
 			r[i] = static_cast<int64_t>(context_.value_from_gaussian_dist()) % q;
 		}
@@ -40,13 +40,13 @@ namespace fheprac
 		for (uint64_t t = 0; t < 2; t++)
 		{
 			c[t] *= r;
-			mod(c[t], static_cast<int64_t>(q));
+			mod(c[t], q);
 
 			c[t] += e[t];
-			mod(c[t], static_cast<int64_t>(q));
+			mod(c[t], q);
 
 			c[t] += m[t];
-			mod(c[t], static_cast<int64_t>(q));
+			mod(c[t], q);
 
 			for (uint64_t i = 0; i < d; i++)
 			{

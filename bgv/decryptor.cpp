@@ -9,12 +9,12 @@ namespace fheprac
 
 	void Decryptor::decrypt(Ciphertext& ciphertext, Plaintext& destination)
 	{
-		const EncryptionParameters param = ciphertext.param();
+		EncryptionParameters param = ciphertext.param();
 
 		const uint64_t l = param.l();
 		const uint64_t d = context_.poly_modulus_degree();
-		const uint64_t p = context_.plain_modulus_value();
-		const uint64_t q = param.q();
+		const int64_t p = static_cast<int64_t>(context_.plain_modulus_value());
+		const int64_t q = static_cast<int64_t>(param.q());
 
 		destination.assign(d);
 

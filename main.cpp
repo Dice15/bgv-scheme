@@ -210,7 +210,7 @@ int main()
     fheprac::SecretKey sk;
     fheprac::PublicKey pk;
 
-    sk = key_gen.get_secret_key();
+    sk = key_gen.secret_key();
     key_gen.create_public_key(pk);
 
     cout << "\nsecret key" << '\n';

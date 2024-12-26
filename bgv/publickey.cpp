@@ -4,9 +4,9 @@ namespace fheprac
 {
 	PublicKey::PublicKey() {}
 
-	PublicKey::PublicKey(std::vector<std::vector<Eigen::Vector<int64_t, Eigen::Dynamic>>>& publickey) : pk_(publickey) {}
+	PublicKey::PublicKey(std::vector<PolyMatrix>& poly_matrix) : pk_(poly_matrix) {}
 
-	std::vector<Eigen::Vector<int64_t, Eigen::Dynamic>> PublicKey::key(int64_t level) const
+	PolyMatrix& PublicKey::data(int64_t level)
 	{
 		return pk_[level];
 	}

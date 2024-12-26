@@ -13,6 +13,7 @@
 #include "modules/fhe-prac/bgv/encryptor.h"
 #include "modules/fhe-prac/bgv/decryptor.h"
 #include "modules/fhe-prac/bgv/evaluator.h"
+#include "modules/fhe-prac/bgv/util/polynomial.h"
 #include <openssl/sha.h>
 #include <iostream>
 #include <iomanip>
@@ -22,8 +23,6 @@
 #include <thread>
 #include <set>
 #include <limits>
-#include <Eigen/Dense>
-
 #include <fstream>
 #include <sstream>
 #include <iomanip> 
@@ -159,89 +158,46 @@ pair<int, vector<pair<int, int>>> count_pairs(long long target) {
     return { count, result };
 }
 
-void matrix_test()
-{
-    // 큰 행렬 예시 (크기 3x3)
-    Eigen::MatrixXd A(3, 3);
-    Eigen::MatrixXd B(3, 3);
 
-    A << 1, 2, 3,
-        4, 5, 6,
-        7, 8, 9;
+// 안전한 모듈러 곱셈 함수
+uint64_t safe_modular_multiplication(uint64_t a, uint64_t b, uint64_t mod) {
+    uint64_t result = 0;    // 결과값 초기화
+    a %= mod;              // a를 mod로 나눈 나머지
+    b %= mod;              // b를 mod로 나눈 나머지
 
-    B << 9, 8, 7,
-        6, 5, 4,
-        3, 2, 1;
+    while (b > 0) {
+        // b가 홀수라면 결과값에 a를 더함
+        if (b & 1) {
+            result = (result + a) % mod;
+        }
+        // a와 b를 2배씩 증가/감소
+        a = (a << 1) % mod;
+        b >>= 1;
+    }
 
-    // 행렬 덧셈
-    Eigen::MatrixXd C = A + B;
-    std::cout << "Matrix A + Matrix B:\n" << C << "\n";
-
-    // 행렬 곱셈
-    Eigen::MatrixXd D = A * B;
-    std::cout << "Matrix A * Matrix B:\n" << D << "\n";
-
-    // 행렬 전치
-    Eigen::MatrixXd E = A.transpose();
-    std::cout << "Transpose of Matrix A:\n" << E << "\n";
+    return result;
 }
 
-void vector_test()
-{
-    // 벡터 예시 (크기 3x1)
-    Eigen::VectorXd v1(3);
-    Eigen::VectorXd v2(3);
-
-    v1 << 1, 2, 3;
-    v2 << 4, 5, 6;
-
-    // 벡터 덧셈
-    Eigen::VectorXd v3 = v1 + v2;
-    std::cout << "v1 + v2:\n" << v3 << "\n";
-
-    // 벡터의 원소별 곱
-    Eigen::VectorXd v4 = v1.cwiseProduct(v2);
-    std::cout << "Element-wise Multiplication of v1 and v2:\n" << v4 << "\n";
-
-    // 벡터 내적
-    double dotProduct = v1.dot(v2);
-    std::cout << "Dot Product of v1 and v2:\n" << dotProduct << "\n";
-}
-
-/*void polynomial_test()
-{
-    // 다항식 계수 벡터 (3x2 + 2x + 1)
-    Eigen::VectorXd f(3);
-    f << 3, 2, 1;  // 3x^2 + 2x + 1
-
-    // 다항식 계수 벡터 (x^2 + 1)
-    Eigen::VectorXd g(3);  // 크기를 맞추기 위해 3으로 설정
-    g << 1, 0, 1;  // x^2 + 1
-
-    // 다항식 덧셈 (계수 벡터의 합)
-    Eigen::VectorXd sum = f + g;
-    std::cout << "Polynomial Sum (f + g):\n" << sum.transpose() << "\n";
-
-    // 다항식 곱셈 (Convolution)
-    Eigen::VectorXd product = f.cwiseProduct(g);  // 점별 곱셈 대신 컨볼루션 또는 다항식 곱셈을 계산해야 함
-    std::cout << "Polynomial Product (f * g):\n" << product.transpose() << "\n";
-}*/
 
 int main()
 {
+    cout << (1148844456385434516 * 1148844456385434514) % 1148844456385434517 << '\n';
+
+    cout << safe_modular_multiplication(1148844456385434516, 1148844456385434514, 1148844456385434517) << '\n';
+
     // context text
     cout << "\n========================== Context ==========================\n";
 
-    fheprac::Context context(4, 15, 3);
+    fheprac::Context context(4, 10, 3);
 
     cout << "\npoly modulus degree: " << context.poly_modulus_degree() << '\n';
 
     cout << "\nplain modulus value: "  << context.plain_modulus_value() << '\n';
 
-    cout << "\nlevel: " << context.level() << '\n';
+    cout << "\ndepth: " << context.depth() << '\n';
 
     cout << "\nparam" << '\n';
-    for (int j = context.level(); j >= 0; j--)
+    for (int j = context.depth(); j >= 0; j--)
     {
         auto param = context.param(j);
         cout << "level: " << param.l() << ", next level: " << param.next_param_index() << ", q: " << param.q() << '\n';
@@ -255,39 +211,52 @@ int main()
     fheprac::PublicKey pk;
 
     sk = key_gen.get_secret_key();
-    key_gen.create_public_key(sk, pk);
+    key_gen.create_public_key(pk);
 
     cout << "\nsecret key" << '\n';
-    for (int j = context.level(); j >= 0; j--)
+    for (int j = context.depth(); j >= 0; j--)
     {
-        cout << '\n';
-        cout << "l = " << j << '\n';
-        auto sk_j = sk.key(j);
+        auto sk_j = sk.data(j);
 
-        for (auto& poly : sk_j)
-        {
-            for (auto& coeff : poly)
+        cout << "\nl = " << j << ", dimension = " << sk_j.row_size() << " x " << sk_j.col_size() << '\n';
+
+        for (int r = 0; r < sk_j.row_size(); r++)
+        {       
+            cout << (r == 0 ? "  1" : ("t^" + to_string(r))) << ": [ ";
+            for (int c = 0; c < sk_j.col_size(); c++)
             {
-                cout << coeff << ' ';
+                cout << "[ ";
+                for (auto& coeff : sk_j.get(r, c).get())
+                {
+                    cout << coeff << ' ';
+                    break;
+                }
+                cout << "] ";
             }
-            cout << '\n';
+            cout << "]\n";
         }
     }
 
     cout << "\n\npublic key" << '\n';
-    for (int j = context.level(); j >= 0; j--)
+    for (int j = context.depth(); j >= 0; j--)
     {
-        cout << '\n';
-        cout << "l = " << j << '\n';
-        auto pk_j = pk.key(j);
+        auto pk_j = pk.data(j);
 
-        for (auto& poly : pk_j)
+        cout << "\nl = " << j << ", dimension = " << pk_j.row_size() << " x " << pk_j.col_size() << '\n';
+
+        for (int r = 0; r < pk_j.row_size(); r++)
         {
-            for (auto& coeff : poly)
-            {
-                cout << coeff << ' ';
+            cout << "[ ";
+            for (int c = 0; c < pk_j.col_size(); c++)
+            {    
+                cout << "[ ";
+                for (auto& coeff : pk_j.get(r, c).get())
+                {
+                    cout << coeff << ' ';
+                }
+                cout << "] ";
             }
-            cout << '\n';
+            cout << "]\n";
         }
     }
 
@@ -337,7 +306,7 @@ int main()
     cout << "\nencrypt\n";
     for (int i = 0; i < context.poly_modulus_degree(); i++)
     {
-        cout << c1(0, i) << ' ' << c1(1, i) << '\n';
+        cout << c1.data().get(0, 0, i) << ' ' << c1.data().get(1, 0, i) << '\n';
     }
 
     // decryptor test
@@ -364,10 +333,10 @@ int main()
     fheprac::Ciphertext c1_ms = c1;
     fheprac::Ciphertext c2_ms = c2;
 
-    for (int j = 0; j < context.level(); j++)
+    for (int j = 0; j < context.depth(); j++)
     {
         cout << '\n';
-        cout << "l = " << context.level() - j << " -> " << context.level() - j - 1 << '\n';
+        cout << "l = " << context.depth() - j << " -> " << context.depth() - j - 1 << '\n';
         cout << "q: " << c1_ms.param().q() << " -> ";
 
         evaluator.mod_switch(c1_ms, c1_ms);

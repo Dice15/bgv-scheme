@@ -1,22 +1,20 @@
 #pragma once
 #include "encryptionparams.h"
 #include <stdint.h>
-#include <random>
+#include <vector>
 
 namespace fheprac
 {
 	class Context
 	{
 	public:
-		Context(uint64_t poly_modulus_degree, uint64_t plain_modulus_bit_size, uint64_t level);
+		Context(uint64_t poly_modulus_degree, uint64_t plain_modulus_bit_size, uint64_t depth);
 
 		uint64_t poly_modulus_degree() const;
 
 		uint64_t plain_modulus_value() const;
 
-		uint64_t level() const;
-
-		uint64_t value_from_gaussian_dist();
+		uint64_t depth() const;
 
 		EncryptionParameters first_param() const;
 
@@ -31,19 +29,15 @@ namespace fheprac
 
 		std::vector<uint64_t> create_modulus_chain(uint64_t t, uint64_t l) const;
 
-		uint64_t d_;   // modulus degree
+		uint64_t deg_;         // modulus degree
 
-		uint64_t t_;   // plain modulus
+		uint64_t plain_mod_;   // plain modulus
 
-		uint64_t l_;   // level
+		uint64_t dep_;         // depth
 
-		uint64_t n_;
+		uint64_t n_;           // matrix dimension
 
 		uint64_t N_;
-
-		std::mt19937 rand_;
-
-		std::normal_distribution<double_t> gaussian_dist_;
 
 		std::vector<EncryptionParameters> params_;
 	};

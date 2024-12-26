@@ -1,5 +1,6 @@
 #pragma once
-#include <Eigen/Dense>
+
+#include "util/polymatrix.h"
 #include <vector>
 
 namespace fheprac
@@ -9,11 +10,11 @@ namespace fheprac
 	public:
 		PublicKey();
 
-		PublicKey(std::vector<std::vector<Eigen::Vector<int64_t, Eigen::Dynamic>>>& publickey);
+		PublicKey(std::vector<PolyMatrix>& poly_matrix);
 
-		std::vector<Eigen::Vector<int64_t, Eigen::Dynamic>> key(int64_t level) const;
+		PolyMatrix& data(int64_t level);
 
 	private:
-		std::vector<std::vector<Eigen::Vector<int64_t, Eigen::Dynamic>>> pk_;
+		std::vector<PolyMatrix> pk_;
 	};
 }

@@ -1,6 +1,4 @@
 #include "decryptor.h"
-#include "util/modular.h"
-#include <Eigen/Dense>
 #include <vector>
 
 namespace fheprac
@@ -9,20 +7,33 @@ namespace fheprac
 
 	void Decryptor::decrypt(Ciphertext& ciphertext, Plaintext& destination)
 	{
-		EncryptionParameters param = ciphertext.param();
+		EncryptionParameters params = ciphertext.param();
 
-		const uint64_t l = param.l();
+		const uint64_t l = params.l();
 		const uint64_t d = context_.poly_modulus_degree();
-		const int64_t p = static_cast<int64_t>(context_.plain_modulus_value());
-		const int64_t q = static_cast<int64_t>(param.q());
+		const uint64_t p = context_.plain_modulus_value();
+		const uint64_t q = params.q();
 
-		destination.assign(d);
+		// TODO: 예외처리
+		// 암호문의 레벨에 해당하는 sk가 없는 경우
 
-		const std::vector<Eigen::Vector<int64_t, Eigen::Dynamic>> sk = sk_.key(l);
+		// ct: 암호문 데이터 (2x1 poly matrix)
+		PolyMatrix ct = ciphertext.data();
 
+		// sk: 레벨dep에서 정의된 비밀키 (2x1 poly matrix)
+		// sk: [[1], [t]]
+		PolyMatrix sk = sk_.data(l);
+
+		// m_q: 복호화 데이터 (1x1 poly matrix)
+		// m_q = [<c^T, s>]_q
+		PolyMatrix mq = ct.t() * sk;
+
+		// m: 평문 데이터 (1x1 poly matrix)
+		// m = [m_q]_p
+		destination.data().assign(1, 1, d - 1, p);
 		for (uint64_t i = 0; i < d; i++)
 		{
-			destination[i] = ((ciphertext(0, i) * sk[0][i]) + (ciphertext(1, i) * sk[1][i])) % q % p;
+			destination.data().set(0, 0, i, mq.get(0, 0, i));
 		}
 	}
 }

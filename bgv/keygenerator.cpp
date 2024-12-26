@@ -1,6 +1,7 @@
 #include "keygenerator.h"
-#include "util/modular.h"
-#include <Eigen/Dense>
+#include "util/distribution.h"
+#include "util/polynomial.h"
+#include "util/polymatrix.h"
 #include <vector>
 #include <iostream>
 
@@ -8,107 +9,115 @@ namespace fheprac
 {
 	KeyGenerator::KeyGenerator(Context& context) : context_(context)
 	{
-		const uint64_t l = context_.level();
+		const uint64_t dep = context_.depth();
 		const uint64_t d = context_.poly_modulus_degree();
 
 		// 생성자에서 비밀키를 생성
-		std::vector<std::vector<Eigen::Vector<int64_t, Eigen::Dynamic>>> sk(
-			l + 1, std::vector<Eigen::Vector<int64_t, Eigen::Dynamic>>(2, Eigen::Vector<int64_t, Eigen::Dynamic>(d)));
+		std::vector<PolyMatrix> sk(dep + 1);
 
-		for (uint64_t j = 0; j <= context_.level(); j++)
+		for (uint64_t j = 0; j <= dep; j++)
 		{
-			EncryptionParameters param = context_.param(j);
+			EncryptionParameters params = context_.param(j);
+			const uint64_t q = params.q();
 
-			// sk의 두 번째 요소(d-1차 다항식)는 1을 계수로 설정한다.
-			for (uint64_t i = 0; i < d; i++)
-			{
-				sk[j][0][i] = static_cast<int64_t>(1);
-			}
-			
-			// sk의 두 번째 요소(d-1차 다항식)는 x(가우시안 분포)에서 뽑은 d개의 값을 계수로 설정한다.
-			for (uint64_t i = 0; i < d; i++)
-			{
-				sk[j][1][i] = static_cast<int64_t>(context_.value_from_gaussian_dist());
-			}
+			// d-1차 다항식을 원소로 갖는 2 x 1 행렬.
+			sk[j].assign(2, 1, d - 1, q);
+
+			// sk의 첫 번째 원소: 상수 다항식으로 설정.
+			// sk[0] = 1 + 0*x + ... + 0*x^(d-1)
+			sk[j].set(0, 0, 0, static_cast<uint64_t>(1));
+
+			// sk의 두 번째 원소: 가우시안 분포에서 뽑은 상수 다항식으로 설정,
+			// sk[1] = t + 0*x + ... + 0*x^(d-1)
+			sk[j].set(1, 0, 0, sample_from_gaussian_dist(context_, params));
 		}
 
-		secret_key_ = SecretKey(sk);
+		sk_ = SecretKey(sk);
 	}
 
 	SecretKey KeyGenerator::get_secret_key() const
 	{
-		return secret_key_;
+		return sk_;
 	}
 
-	void KeyGenerator::create_public_key(SecretKey &secret_key, PublicKey& destination)
+	void KeyGenerator::create_public_key(PublicKey& destination)
 	{
-		const uint64_t l = context_.level();
+		const uint64_t dep = context_.depth();
 		const uint64_t d = context_.poly_modulus_degree();
-		const int64_t p = static_cast<int64_t>(context_.plain_modulus_value());
+		const uint64_t p = context_.plain_modulus_value();
 
-		std::vector<std::vector<Eigen::Vector<int64_t, Eigen::Dynamic>>> pk(
-			l + 1, std::vector<Eigen::Vector<int64_t, Eigen::Dynamic>>(2, Eigen::Vector<int64_t, Eigen::Dynamic>(d)));
+		std::vector<PolyMatrix> pk(dep + 1);
 
-		for (uint64_t j = 0; j <= context_.level(); j++)
+		for (uint64_t j = 0; j <= dep; j++)
 		{
-			EncryptionParameters param = context_.param(j);
-			const int64_t q = static_cast<int64_t>(param.q());
-			const int64_t h_q = q / static_cast<int64_t>(2);
+			EncryptionParameters params = context_.param(j);
+			const uint64_t q = params.q();
 
-			Eigen::Vector<int64_t, Eigen::Dynamic> t = secret_key.key(j)[1];
-			Eigen::Vector<int64_t, Eigen::Dynamic> B(d);
-			Eigen::Vector<int64_t, Eigen::Dynamic> e(d);
+			// d-1차 다항식을 원소로 갖는 2 x 1 행렬.
+			pk[j].assign(1, 2, d - 1, q);
 
-			for (uint64_t i = 0; i < d; i++)
-			{
-				B[i] = static_cast<int64_t>(context_.value_from_gaussian_dist()); //static_cast<int64_t>(param.value_from_uniform_dist());
-				e[i] = static_cast<int64_t>(context_.value_from_gaussian_dist());
-			}
+			// t: sk[1][0]로 설정.
+			Polynomial t = sk_.data(j).get(1, 0);
 
-			Eigen::Vector<int64_t, Eigen::Dynamic> b;
-			
-			b = B.cwiseProduct(t); 
-			mod(b, q);
+			// B: Zq 균등 분포에서 뽑은 다항식으로 설정,
+			// B = z_0 + z_1*x + ... + z_(d-1)*x^(d-1)
+			Polynomial B = sample_poly_from_uniform_dist(context_, params);  // sample_poly_from_uniform_dist
 
-			b += (p * e);
-			mod(b, q);
+			// e: 가우시안 분포에서 뽑은 다항식으로 설정,
+			// e = e_0 + e_1*x + ... + e_(d-1)^(d-1)
+			Polynomial e = sample_poly_from_gaussian_dist(context_, params);
 
-			pk[j][0] = b;
-			pk[j][1] = -B;
-			//negate(pk[j][1], q);
+			// b = Bt + pe
+			Polynomial b = (B * t) + (e * p);
 
-			/*std::vector<Eigen::Vector<int64_t, Eigen::Dynamic>> A = pk[j];
-			std::vector<Eigen::Vector<int64_t, Eigen::Dynamic>> s = secret_key.key(j);
+			// pk = (b, -B)
+			pk[j].set(0, 0, b);
+			pk[j].set(0, 1, -B);
 
-			Eigen::Vector<int64_t, Eigen::Dynamic> temp1 = A[0].cwiseProduct(s[0]);
-			mod(temp1, q);
 
-			Eigen::Vector<int64_t, Eigen::Dynamic> temp2 = A[1].cwiseProduct(s[1]);
-			mod(temp2, q);
+			// TEST Code
+			PolyMatrix text_A = pk[j];
+			PolyMatrix text_s = sk_.data(j);
+			PolyMatrix text_e = text_A * text_s;
 
-			Eigen::Vector<int64_t, Eigen::Dynamic> temp3 = B + pk[j][1];//temp1 + temp2;
-			mod(temp3, q);
-
-			std::cout << "\ntest1\n";
+			std::cout << "\n===========================\n";
+			std::cout << "\ntest: A*s = p*e\n";
 			for (int i = 0; i < d; i++)
 			{
-				std::cout << A[0][i] << ' ' << s[0][i] << ' ' << temp1[i] << '\n';
+				std::cout << e.get(i) << " -> " << (p * e.get(i)) % q << " = " << text_e.get(0, 0, i) << " -> " << text_e.get(0, 0, i) % p << '\n';
 			}
 
-			std::cout << "\ntest2\n";
-			auto temp4 = B.cwiseProduct(t);
+			/*std::cout << "\ntest: pk\n";
 			for (int i = 0; i < d; i++)
 			{
-				std::cout << A[1][i] << ' ' << s[1][i] << ' ' << temp2[i] << ' ' << temp4[i] << '\n';
+				std::cout << b.get(i) << ", " << B.get(i) << ", " << (-B).get(i) << '\n';
 			}
 
-			std::cout << "\ntest3\n";
+			std::cout << "\ntest: t\n";
 			for (int i = 0; i < d; i++)
 			{
-				std::cout << p * e[i] << ' ' << temp3[i] << ' ' << temp3[i] % p << '\n';
+				std::cout << t.get(i) << '\n';
+			}
+
+			std::cout << "\ntest: B*t vs pk*sk\n";
+			for (int i = 0; i < d; i++)
+			{
+				std::cout << (B * t).get(i) << ' ' << text_e.get(0, 0, i) << '\n';
 			}*/
 		}
 
 		destination = PublicKey(pk);
+	}
+
+	void KeyGenerator::create_relin_keys(RelinKeys& destination)
+	{
+		// TODO: Key Switching 로직 구현 필요.
+	}
+
+	
+	void KeyGenerator::create_public_key_internal(SecretKey& secret_key, PublicKey& destination)
+	{
+		// TODO: Key Switching시 public key N * n 크기의 생성이 필요함. 
+		// 따라서 공개키를 생성하는 공통 로직을 구현한뒤 공개키, 재선형화키 생성 함수에서 호출해서 쓰도록 수정할 필요가 있음.
 	}
 }

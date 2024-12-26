@@ -4,9 +4,9 @@ namespace fheprac
 {
 	SecretKey::SecretKey() {}
 
-	SecretKey::SecretKey(std::vector<std::vector<Eigen::Vector<int64_t, Eigen::Dynamic>>>& secretkey) : sk_(secretkey) {}
+	SecretKey::SecretKey(std::vector<PolyMatrix>& poly_matrix) : sk_(poly_matrix) {}
 
-	std::vector<Eigen::Vector<int64_t, Eigen::Dynamic>> SecretKey::key(int64_t level) const
+	PolyMatrix& SecretKey::data(int64_t level)
 	{
 		return sk_[level];
 	}

@@ -14,12 +14,14 @@ namespace fheprac
 
 		SecretKey get_secret_key() const;
 
-		void create_public_key(SecretKey& secret_key, PublicKey& destination);
+		void create_public_key(PublicKey& destination);
 
-		void create_relin_keys(RelinKeys& destination) const;
+		void create_relin_keys(RelinKeys& destination);
 
 	private:
-		SecretKey secret_key_;
+		void create_public_key_internal(SecretKey& secret_key, PublicKey& destination);
+
+		SecretKey sk_;
 
 		Context context_;
 	};

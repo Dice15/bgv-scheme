@@ -1,25 +1,20 @@
 #pragma once
 
 #include "context.h"
+#include "util/polymatrix.h"
 
 namespace fheprac
 {
 	class Plaintext
 	{
 	public:
-		Plaintext();
+		Plaintext() = default;
 
-		Plaintext(uint64_t slot_count);
+		Plaintext(PolyMatrix poly_matrix);
 
-		int64_t& operator[](uint64_t index);
-
-		void assign(uint64_t slot_count);
-
-		uint64_t slot_count() const;
+		PolyMatrix& data();
 
 	private:
-		uint64_t slot_count_;
-
-		std::vector<int64_t> slots_;
+		PolyMatrix pt_;
 	};
 }

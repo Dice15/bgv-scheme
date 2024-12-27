@@ -1,27 +1,28 @@
 #include "context.h"
 #include <seal/seal.h>
+#include <stdexcept>
 
 namespace fheprac
 {
-	Context::Context(uint64_t poly_modulus_degree, uint64_t plain_modulus_bit_size, uint64_t depth)
-	{
-		deg_ = poly_modulus_degree;
+    Context::Context(uint64_t poly_modulus_degree, uint64_t plain_modulus_bit_size, uint64_t depth)
+    {
+        deg_ = poly_modulus_degree;
 
         plain_mod_ = seal::PlainModulus::Batching(poly_modulus_degree, plain_modulus_bit_size).value();
 
         dep_ = depth;
 
-		n_ = 1;
+        n_ = 1;
 
-		N_ = 1;
-	
+        N_ = 1;
+
         // 모듈러스 체인 및 파라미터 생성
-        for (const auto& q : create_modulus_chain(plain_mod_, dep_))
+        for (const auto& q : create_modulus_chain())
         {
             params_.push_back(EncryptionParameters(q, params_.size(), (params_.size() + dep_ - 1) % dep_));
         }
-	}
-    
+    }
+
     uint64_t Context::poly_modulus_degree() const
     {
         return deg_;
@@ -79,30 +80,46 @@ namespace fheprac
         }
     }
 
-    std::vector<uint64_t> Context::create_modulus_chain(uint64_t t, uint64_t l) const
+    // 구현
+    // 1) 재선형화 키 생성. 이때 같은 sk를 사용하도록 함
+    // 2) 덧셈 구현
+    // 3) 곱셈 구현
+    //  
+    // 최적화
+    // 1) q를 빨리 구하는 법 
+    // 2) 안전한 곱셈 개선
+    // 3) 다항식 곱셈에서 NTT활용하도록 함
+    //
+    std::vector<uint64_t> Context::create_modulus_chain() const
     {
-        std::vector<uint64_t> q;
+        uint64_t dep = dep_;
+        uint64_t p = plain_mod_;
+        uint64_t p_bit = static_cast<uint64_t>(std::log2(p)) + static_cast<uint64_t>(1);
 
-        // t보다 큰 서로소 소수 L + 1개를 찾는다.
-        l = l + 1;
-        uint64_t start = std::max(static_cast<uint64_t>(2), t + 1);
+        // 암호화, 복호화 과정에서 대략 누적 오차가 약 p * (6 * X^2 + 30)이 발생한다.
+        // X는 표준편자가 3.2인 가우시안 분포이다.
+        // 따라서 p대비 q의 크기를 11비트 이상으로 잡으면 충분하다.  
+        uint64_t q_bound = static_cast<uint64_t>(1) << (p_bit + 11);
 
-        // 공개키 생성, 암호화, 복호화 과정에서 대략 누적 오차가 약 p*(e^3)이 발생한다. 따라서 넉넉하게 p대비 q의 크기를 10비트 이상으로 잡는다.  
-        uint64_t start_bit = static_cast<uint64_t>(std::log2(start)) + 1;
-        uint64_t min_val_with_5_bits = static_cast<uint64_t>(1) << (start_bit + 10);
-        start = std::max(start, min_val_with_5_bits);
+        // p보다 큰 서로소 소수 dep + 1개를 찾는다.
+        std::vector<uint64_t> q_chain;
 
-        q.reserve(l);
+        q_chain.reserve(dep + 1);
 
-        for (uint64_t i = 0; i < l; i++)
+        for (uint64_t i = 0; i <= dep; i++)
         {
-            uint64_t prime = find_relatively_prime(start, t);
-            q.push_back(prime);
-            start = prime + 1;
+            uint64_t q = find_relatively_prime(q_bound, p);
+            q_chain.push_back(q);
+            q_bound = q + 1;
         }
 
-        std::reverse(q.begin(), q.end());
-        
-        return q;
+        if (static_cast<uint64_t>(q_chain.size()) < dep + 1)
+        {
+            throw std::invalid_argument("The number of q values is less than dep + 1.");
+        }
+
+        std::reverse(q_chain.begin(), q_chain.end());
+
+        return q_chain;
     }
 }

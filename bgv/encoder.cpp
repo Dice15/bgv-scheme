@@ -12,7 +12,7 @@ namespace fheprac
 		const uint64_t p = context_.plain_modulus_value();
 
 		// pt: 평문 데이터 (1x1 poly matrix)
-		// pt = (m_0 + m_1*x + ... + m_(d-1)*x) mod p
+		// pt = (v_0 + v_1*x + ... + v_(d-1)*x) mod p
 		destination.data().assign(1, 1, d - 1, p);
 
 		for (uint64_t i = 0; i < d; i++)

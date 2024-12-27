@@ -12,7 +12,15 @@ namespace fheprac
 		std::mt19937 rand(rd());
 		std::normal_distribution<double_t> dist(0.0, 3.2);
 
-		return static_cast<uint64_t>(std::abs(std::llround(dist(rand)))) % q;
+		double_t r = dist(rand);
+		uint64_t v = static_cast<uint64_t>(std::abs(std::llround(r))) % q;
+
+		if (std::signbit(r))
+		{
+			v = q - v;
+		}
+
+		return v;
 	}
 
 	Polynomial sample_poly_from_gaussian_dist(const Context& context, const EncryptionParameters& params)
@@ -24,13 +32,19 @@ namespace fheprac
 		std::mt19937 rand(rd());
 		std::normal_distribution<double_t> dist(0.0, 3.2);
 
-		// R = Z[x] / x^d - 1
+		// R = Z[x] / x^d + 1
 		Polynomial destination(context.poly_modulus_degree() - static_cast<uint64_t>(1), q);
 
 		for (uint64_t i = 0; i <= destination.degree(); i++)
 		{
 			double_t r = dist(rand);
 			uint64_t v = static_cast<uint64_t>(std::abs(std::llround(r))) % q;
+
+			if (std::signbit(r))
+			{
+				v = q - v;
+			}
+
 			destination.set(i, v);
 		}
 
@@ -58,7 +72,7 @@ namespace fheprac
 		std::mt19937 rand(rd());
 		std::uniform_int_distribution<uint64_t> dist(0, q - static_cast<uint64_t>(1));
 
-		// R = Z[x] / x^d - 1
+		// R = Z[x] / x^d + 1
 		Polynomial destination(context.poly_modulus_degree() - static_cast<uint64_t>(1), q);
 
 		for (uint64_t i = 0; i <= destination.degree(); i++)

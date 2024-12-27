@@ -27,7 +27,7 @@ namespace fheprac
 
 		uint64_t find_relatively_prime(uint64_t min_val, uint64_t rp_factor) const;
 
-		std::vector<uint64_t> create_modulus_chain(uint64_t t, uint64_t l) const;
+		std::vector<uint64_t> create_modulus_chain() const;
 
 		uint64_t deg_;         // modulus degree
 

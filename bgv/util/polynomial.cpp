@@ -160,7 +160,7 @@ namespace fheprac
 		{
 			if (destination.coeffs_[i] != 0)
 			{
-				// R = Z[x] / x^d - 1
+				// R = Z[x] / x^d + 1
 				// x^i = x^red * x^(i-red) = -1 * x^(i-red)
 				// -1 * x^(i-red) + x^(i-red)
 				destination.coeffs_[i - red] += negate_coeff(destination.coeffs_[i]);
@@ -211,7 +211,7 @@ namespace fheprac
 		{
 			if (destination.coeffs_[i] != 0)
 			{
-				// R = Z[x] / x^d - 1
+				// R = Z[x] / x^d + 1
 				// x^i = x^red * x^(i-red) = -1 * x^(i-red)
 				// -1 * x^(i-red) + x^(i-red)
 				destination.coeffs_[i - red] += negate_coeff(destination.coeffs_[i]);
@@ -236,7 +236,7 @@ namespace fheprac
 
 	uint64_t Polynomial::negate_coeff(uint64_t coeff) const
 	{
-		return static_cast<uint64_t>(static_cast<int64_t>(mod_) - (static_cast<int64_t>(coeff) % static_cast<int64_t>(mod_)));
+		return mod_ - (coeff % mod_);
 	}
 
 	uint64_t Polynomial::safe_coeff_multiply(uint64_t coeff1, uint64_t coeff2) const 

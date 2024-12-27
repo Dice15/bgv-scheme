@@ -181,14 +181,10 @@ uint64_t safe_modular_multiplication(uint64_t a, uint64_t b, uint64_t mod) {
 
 int main()
 {
-    cout << (1148844456385434516 * 1148844456385434514) % 1148844456385434517 << '\n';
-
-    cout << safe_modular_multiplication(1148844456385434516, 1148844456385434514, 1148844456385434517) << '\n';
-
     // context text
     cout << "\n========================== Context ==========================\n";
 
-    fheprac::Context context(4, 10, 3);
+    fheprac::Context context(1024, 15, 3);
 
     cout << "\npoly modulus degree: " << context.poly_modulus_degree() << '\n';
 
@@ -271,7 +267,7 @@ int main()
     for (int i = 0; i < context.poly_modulus_degree(); i++)
     {
         v1[i] = i + 1;
-        v2[i] = (i * 10) - 15;
+        v2[i] = -v1[i];
     }
 
     fheprac::Plaintext p1;

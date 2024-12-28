@@ -11,7 +11,7 @@ namespace fheprac
 		const uint64_t d = context_.poly_modulus_degree();
 		const uint64_t p = context_.plain_modulus_value();
 
-		// pt: 평문 데이터 (1x1 poly matrix)
+		// pt: 평문. (1x1 poly matrix)
 		// pt = (v_0 + v_1*x + ... + v_(d-1)*x) mod p
 		destination.data().assign(1, 1, d - 1, p);
 
@@ -39,7 +39,7 @@ namespace fheprac
 		const uint64_t p = context_.plain_modulus_value();
 		const uint64_t h_p = p / static_cast<uint64_t>(2);
 
-		// v: 벡터 (d-vetor)
+		// v: 벡터. (d-vetor)
 		// v = (pt_0 + pt_1*x + ... + pt_(d-1)*x) mod p
 		destination.assign(slot_count, 0);
 

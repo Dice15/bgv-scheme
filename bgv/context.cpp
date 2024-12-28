@@ -16,7 +16,7 @@ namespace fheprac
 
         N_ = 1;
 
-        // 모듈러스 체인 및 파라미터 생성
+        // 모듈러스 체인 기반으로 파라미터 생성.
         for (const auto& q : create_modulus_chain())
         {
             params_.push_back(EncryptionParameters(q, params_.size(), (params_.size() + dep_ - 1) % dep_));
@@ -53,72 +53,42 @@ namespace fheprac
         return params_[index];
     }
 
-    bool Context::is_prime(uint64_t val) const
+    uint64_t Context::find_odd_coprime_to_prime(uint64_t bound, uint64_t rp_factor) const
     {
-        if (val < 2) return false;
-        if (val % 2 == 0 && val > 2) return false;
-
-        for (uint64_t i = 3; i <= static_cast<uint64_t>(std::sqrt(static_cast<double_t>(val))); i += 2)
-        {
-            if (val % i == 0) return false;
-        }
-
-        return true;
-    }
-
-    uint64_t Context::find_relatively_prime(uint64_t min_val, uint64_t rp_factor) const
-    {
-        uint64_t candidate = min_val;
+        uint64_t candidate = (bound % 2 == 0) ? bound + 1 : bound;
 
         while (true)
         {
-            if (is_prime(candidate) && std::gcd(candidate, rp_factor) == 1)
+            if (candidate % rp_factor != 0)
             {
                 return candidate;
             }
-            candidate++;
+            candidate += 2;
         }
     }
 
-    // 구현
-    // 1) 재선형화 키 생성. 이때 같은 sk를 사용하도록 함
-    // 2) 덧셈 구현
-    // 3) 곱셈 구현
-    //  
-    // 최적화
-    // 1) q를 빨리 구하는 법 
-    // 2) 안전한 곱셈 개선
-    // 3) 다항식 곱셈에서 NTT활용하도록 함
-    //
     std::vector<uint64_t> Context::create_modulus_chain() const
     {
         uint64_t dep = dep_;
         uint64_t p = plain_mod_;
-        uint64_t p_bit = static_cast<uint64_t>(std::log2(p)) + static_cast<uint64_t>(1);
+        uint64_t d = deg_;
 
-        // 암호화, 복호화 과정에서 대략 누적 오차가 약 p * (6 * X^2 + 30)이 발생한다.
-        // X는 표준편자가 3.2인 가우시안 분포이다.
-        // 따라서 p대비 q의 크기를 11비트 이상으로 잡으면 충분하다.  
-        uint64_t q_bound = static_cast<uint64_t>(1) << (p_bit + 11);
+        // 암호화, 복호화 과정에서 대략 누적 오차가 약 p * (d*X) * (2*X+1) = p * (2*d*X^2 + d*X)이 발생한다.
+        // X는 표준편자가 3.2인 가우시안 분포에서 뽑은 값이다. 따라서 X는 10으로 계산한다.
+        // 따라서 p대비 q_chain의 크기를 (p * (2*d*X^2 + d*X))비트 보다 크게 잡으면 충분하다. 
+        uint64_t expected = p * ((static_cast<uint64_t>(2) * d * static_cast<uint64_t>(100)) + (d * static_cast<uint64_t>(10)) + static_cast<uint64_t>(1));
+        uint64_t expected_bit = static_cast<uint64_t>(std::log2l(expected)) + static_cast<uint64_t>(1);
+        uint64_t q_bound = static_cast<uint64_t>(1) << (expected_bit + 1);
 
-        // p보다 큰 서로소 소수 dep + 1개를 찾는다.
-        std::vector<uint64_t> q_chain;
+        // p와 서로소인 홀수를 (dep + 1)개 찾는다.
+        std::vector<uint64_t> q_chain(dep + 1);
 
-        q_chain.reserve(dep + 1);
-
-        for (uint64_t i = 0; i <= dep; i++)
+        for (uint64_t i = 0; i < q_chain.size(); i++)
         {
-            uint64_t q = find_relatively_prime(q_bound, p);
-            q_chain.push_back(q);
-            q_bound = q + 1;
+            uint64_t q = find_odd_coprime_to_prime(q_bound, p);
+            q_chain[i] = q;
+            q_bound = q + 2;
         }
-
-        if (static_cast<uint64_t>(q_chain.size()) < dep + 1)
-        {
-            throw std::invalid_argument("The number of q values is less than dep + 1.");
-        }
-
-        std::reverse(q_chain.begin(), q_chain.end());
 
         return q_chain;
     }

@@ -1,5 +1,6 @@
 #include "polymatrix.h"
 #include <stdexcept>
+#include <iostream>
 
 namespace fheprac
 {
@@ -70,6 +71,25 @@ namespace fheprac
             for (uint64_t c = 0; c < col_size_; c++)
             {
                 elems_[r][c].assign(deg_, mod_, value);
+            }
+        }
+    }
+
+    void PolyMatrix::reset(uint64_t row_size, uint64_t col_size, uint64_t degree, uint64_t modulus, uint64_t value)
+    {
+        row_size_ = row_size;
+        col_size_ = col_size;
+        deg_ = degree;
+        mod_ = modulus;
+        elems_.resize(row_size_);
+
+        for (uint64_t r = 0; r < row_size_; r++)
+        {
+            elems_[r].resize(col_size_);
+
+            for (uint64_t c = 0; c < col_size_; c++)
+            {
+                elems_[r][c].reset(deg_, mod_, value);
             }
         }
     }

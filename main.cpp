@@ -14,6 +14,7 @@
 #include "modules/fhe-prac/bgv/decryptor.h"
 #include "modules/fhe-prac/bgv/evaluator.h"
 #include "modules/fhe-prac/bgv/util/polynomial.h"
+#include <intrin.h>
 #include <openssl/sha.h>
 #include <iostream>
 #include <iomanip>
@@ -179,12 +180,27 @@ uint64_t safe_modular_multiplication(uint64_t a, uint64_t b, uint64_t mod) {
 }
 
 
+// 구현
+// 1) 모듈러스 스위칭 구현.
+// 2) 암호문에 차수 추가
+// 3) sk는 하나의 비밀키를 사용하되, 
+// 2) 덧셈 구현
+// 3) 곱셈 구현
+// 2) 재선형화 키 생성. 이때 같은 sk를 사용하도록 함
+
+//  
+// 최적화
+// 1) q를 빨리 구하는 법 
+// 2) 안전한 곱셈 개선
+// 3) 다항식 곱셈에서 NTT활용하도록 함
+//
+
 int main()
 {
     // context text
     cout << "\n========================== Context ==========================\n";
 
-    fheprac::Context context(1024, 15, 3);
+    fheprac::Context context(1024, 20, 5);
 
     cout << "\npoly modulus degree: " << context.poly_modulus_degree() << '\n';
 
@@ -209,7 +225,7 @@ int main()
     sk = key_gen.secret_key();
     key_gen.create_public_key(pk);
 
-    cout << "\nsecret key" << '\n';
+   /* cout << "\nsecret key" << '\n';
     for (int j = context.depth(); j >= 0; j--)
     {
         auto sk_j = sk.data(j);
@@ -254,7 +270,7 @@ int main()
             }
             cout << "]\n";
         }
-    }
+    }*/
 
     // encoder test
     cout << "\n========================== BGV Encoder ==========================\n";
@@ -272,6 +288,8 @@ int main()
 
     fheprac::Plaintext p1;
     fheprac::Plaintext p2;
+    vector<int64_t> v1_de;
+    vector<int64_t> v2_de;
 
     encoder.encode(v1, p1);
     encoder.encode(v2, p2);
@@ -279,20 +297,27 @@ int main()
     v1.clear();
     v2.clear();
 
-    encoder.decode(p1, v1);
-    encoder.decode(p2, v2);
+    encoder.decode(p1, v1_de);
+    encoder.decode(p2, v2_de);
 
     cout << "\nencode and decode\n";
+
+    bool is_correct_decode = true;
     for (int i = 0; i < context.poly_modulus_degree(); i++)
     {
-        cout << v1[i] << ' ' << v2[i] << '\n';
+        if (v1[i] != v1_de[i] || v2[i] != v2_de[i])
+        {
+            is_correct_decode = false;
+            break;
+        }
     }
+
+    cout << (is_correct_decode ? "\ncorrect answer\n" : "\nwrong answer\n");
 
     // encryptor test
     cout << "\n========================== BGV Encryptor ==========================\n";
 
     fheprac::Encryptor encryptor(context, pk);
-
     fheprac::Ciphertext c1;
     fheprac::Ciphertext c2;
 
@@ -300,27 +325,39 @@ int main()
     encryptor.encrypt(p2, c2);
 
     cout << "\nencrypt\n";
-    for (int i = 0; i < context.poly_modulus_degree(); i++)
+    /*for (int i = 0; i < context.poly_modulus_degree(); i++)
     {
         cout << c1.data().get(0, 0, i) << ' ' << c1.data().get(1, 0, i) << '\n';
-    }
+    }*/
 
     // decryptor test
     cout << "\n========================== BGV Decryptor ==========================\n";
 
     fheprac::Decryptor decryptor(context, sk);
+    fheprac::Plaintext p1_dc;
+    fheprac::Plaintext p2_dc;
+    vector<int64_t> v1_dc;
+    vector<int64_t> v2_dc;
 
-    decryptor.decrypt(c1, p1);
-    decryptor.decrypt(c2, p2);
+    decryptor.decrypt(c1, p1_dc);
+    decryptor.decrypt(c2, p2_dc);
 
-    encoder.decode(p1, v1);
-    encoder.decode(p2, v2);
+    encoder.decode(p1_dc, v1_dc);
+    encoder.decode(p2_dc, v2_dc);
 
     cout << "\ndecrypt" << '\n';
+
+    bool is_correct_decrypt = true;
     for (int i = 0; i < context.poly_modulus_degree(); i++)
     {
-        cout << v1[i] << ' ' << v2[i] << '\n';
+        if (v1[i] != v1_dc[i] || v2[i] != v2_dc[i])
+        {
+            is_correct_decrypt = false;
+            break;
+        }
     }
+
+    cout << (is_correct_decrypt ? "\ncorrect answer\n" : "\nwrong answer\n");
 
     // modulus switching test
     cout << "\n========================== BGV Modulus Switching ==========================\n";
@@ -328,6 +365,10 @@ int main()
     fheprac::Evaluator evaluator(context);
     fheprac::Ciphertext c1_ms = c1;
     fheprac::Ciphertext c2_ms = c2;
+    fheprac::Plaintext p1_ms;
+    fheprac::Plaintext p2_ms;
+    vector<int64_t> v1_ms;
+    vector<int64_t> v2_ms;
 
     for (int j = 0; j < context.depth(); j++)
     {
@@ -340,17 +381,23 @@ int main()
 
         cout << c1_ms.param().q() << '\n';
 
-        decryptor.decrypt(c1_ms, p1);
-        decryptor.decrypt(c2_ms, p2);
+        decryptor.decrypt(c1_ms, p1_ms);
+        decryptor.decrypt(c2_ms, p2_ms);
 
-        encoder.decode(p1, v1);
-        encoder.decode(p2, v2);
+        encoder.decode(p1_ms, v1_ms);
+        encoder.decode(p2_ms, v2_ms);
 
-        cout << '\n';
+        bool is_correct_mod_switch = true;
         for (int i = 0; i < context.poly_modulus_degree(); i++)
         {
-            cout << v1[i] << ' ' << v2[i] << '\n';
+            if (v1[i] != v1_ms[i] || v2[i] != v2_ms[i])
+            {
+                is_correct_mod_switch = false;
+                break;
+            }
         }
+
+        cout << (is_correct_mod_switch ? "\ncorrect answer\n" : "\nwrong answer\n");
     }
 
    // matrix_test();

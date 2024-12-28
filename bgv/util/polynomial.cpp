@@ -61,6 +61,33 @@ namespace fheprac
 		coeffs_.assign(deg_ + 1, value);
 	}
 
+	void Polynomial::reset(uint64_t degree, uint64_t modulus, uint64_t value)
+	{
+		uint64_t mod_prev = mod_;
+		uint64_t mod_prev_h = mod_prev >> 1;
+		uint64_t mod_curr = modulus;
+
+		deg_ = degree;
+		mod_ = modulus;
+		coeffs_.resize(deg_ + 1, value);
+
+		for (uint64_t i = 0; i <= deg_; i++)
+		{
+			uint64_t coeff = coeffs_[i];
+
+			if (coeff > mod_prev_h)
+			{
+				coeff = mod_curr - ((mod_prev - coeff) % mod_curr);
+			}
+			else
+			{
+				coeff = coeff % mod_curr;
+			}
+
+			coeffs_[i] = coeff;
+		}
+	}
+
 	Polynomial Polynomial::operator+(const Polynomial& other) const
 	{
 		if (deg_ != other.deg_ || mod_ != other.mod_)

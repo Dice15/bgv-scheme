@@ -31,6 +31,8 @@ namespace fheprac
 
 		void assign(uint64_t row_size, uint64_t col_size, uint64_t degree, uint64_t modulus, uint64_t value = 0);
 
+		void reset(uint64_t row_size, uint64_t col_size, uint64_t degree, uint64_t modulus, uint64_t value = 0);
+
 		PolyMatrix t() const;
 
 		PolyMatrix operator+(const PolyMatrix& other) const;

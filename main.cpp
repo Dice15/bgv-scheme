@@ -7,6 +7,8 @@
 #include "modules/fhe-prac/bgv/context.h"
 #include "modules/fhe-prac/bgv/keygenerator.h"
 #include "modules/fhe-prac/bgv/secretkey.h"
+#include "modules/fhe-prac/bgv/publickey.h"
+#include "modules/fhe-prac/bgv/relinkeys.h"
 #include "modules/fhe-prac/bgv/encoder.h"
 #include "modules/fhe-prac/bgv/plaintext.h"
 #include "modules/fhe-prac/bgv/ciphertext.h"
@@ -180,27 +182,35 @@ uint64_t safe_modular_multiplication(uint64_t a, uint64_t b, uint64_t mod) {
 }
 
 
-// 구현
-// 1) 모듈러스 스위칭 구현.
-// 2) 암호문에 차수 추가
-// 3) sk는 하나의 비밀키를 사용하되, 
-// 2) 덧셈 구현
-// 3) 곱셈 구현
-// 2) 재선형화 키 생성. 이때 같은 sk를 사용하도록 함
-
+// New Complete
+// 1) 1개의 비밀키를 사용할 수 있도록 개선
+// 2) 재선형화 구현
+// 3) 모듈러스 스위칭 구현
+// 4) 덧셈/뺄셈 구현
+// 5) 곱셈 구현
 //  
-// 최적화
-// 1) q를 빨리 구하는 법 
-// 2) 안전한 곱셈 개선
-// 3) 다항식 곱셈에서 NTT활용하도록 함
+// TODO
+// 1) 소수 p와 서로소인 홀수 q를 구하는 속도 개선
+// 2) 안전한 곱셈 속도 개선
+// 3) 다항식 곱셈에 NTT 적용 (이렇게 된다면 q는 홀수가 아니라 소수가 되어야 함)
+// 4) 나머지 연산 개선 (%연산자 사용하지 않기)
+// 5) Zq에서 음수는 q/2초과의 수로 표현하기 때문에, m+pe가 q/2보다 커지는 현상이 발생. 
+//    (음수는 공개키 생성 시, (Z[x]/x^d + 1) 위에서 곱셈할때 생김)
+// 
+// Total Complete
+// 1) Keygenerator 구현. (secretkey/publickey/relinkey)
+// 2) Encoder 구현. (encode, decode)
+// 3) Encryptor 구현. (Encrypt)
+// 4) Decryptor 구현. (Decrypt)
+// 5) Evaluator 구현. (Modulus switch, Relinearize, Add, Sub, Multiply)
 //
 
 int main()
 {
     // context text
-    cout << "\n========================== Context ==========================\n";
+    cout << "\\n========================== Context ==========================\n";
 
-    fheprac::Context context(1024, 20, 5);
+    fheprac::Context context(16, 10, 2);
 
     cout << "\npoly modulus degree: " << context.poly_modulus_degree() << '\n';
 
@@ -216,14 +226,16 @@ int main()
     }
 
     // key test
-    cout << "\n========================== KeyGenerator ==========================\n";
+    cout << "\n\n========================== KeyGenerator ==========================\n";
 
     fheprac::KeyGenerator key_gen(context);
     fheprac::SecretKey sk;
     fheprac::PublicKey pk;
+    fheprac::RelinKeys rk;
 
     sk = key_gen.secret_key();
     key_gen.create_public_key(pk);
+    key_gen.create_relin_keys(rk);
 
    /* cout << "\nsecret key" << '\n';
     for (int j = context.depth(); j >= 0; j--)
@@ -273,18 +285,20 @@ int main()
     }*/
 
     // encoder test
-    cout << "\n========================== BGV Encoder ==========================\n";
+    cout << "\n\n========================== BGV Encoder ==========================\n";
 
     fheprac::Encoder encoder(context);
 
     vector<int64_t> v1(context.poly_modulus_degree());
     vector<int64_t> v2(context.poly_modulus_degree());
+    vector<int64_t> v3(context.poly_modulus_degree());
 
-    for (int i = 0; i < context.poly_modulus_degree(); i++)
+    for (int i = 0; i < context.poly_modulus_degree() ; i++)
     {
         v1[i] = i + 1;
-        v2[i] = -v1[i];
+        v3[i] = 0;
     }
+    v2[0] = 2;
 
     fheprac::Plaintext p1;
     fheprac::Plaintext p2;
@@ -294,13 +308,10 @@ int main()
     encoder.encode(v1, p1);
     encoder.encode(v2, p2);
 
-    v1.clear();
-    v2.clear();
-
     encoder.decode(p1, v1_de);
     encoder.decode(p2, v2_de);
 
-    cout << "\nencode and decode\n";
+    cout << "\nEncoder: \n";
 
     bool is_correct_decode = true;
     for (int i = 0; i < context.poly_modulus_degree(); i++)
@@ -315,7 +326,7 @@ int main()
     cout << (is_correct_decode ? "\ncorrect answer\n" : "\nwrong answer\n");
 
     // encryptor test
-    cout << "\n========================== BGV Encryptor ==========================\n";
+    cout << "\n\n========================== BGV Encryptor ==========================\n";
 
     fheprac::Encryptor encryptor(context, pk);
     fheprac::Ciphertext c1;
@@ -324,14 +335,14 @@ int main()
     encryptor.encrypt(p1, c1);
     encryptor.encrypt(p2, c2);
 
-    cout << "\nencrypt\n";
+    cout << "\nEncryptor: \n";
     /*for (int i = 0; i < context.poly_modulus_degree(); i++)
     {
         cout << c1.data().get(0, 0, i) << ' ' << c1.data().get(1, 0, i) << '\n';
     }*/
 
     // decryptor test
-    cout << "\n========================== BGV Decryptor ==========================\n";
+    cout << "\n\n========================== BGV Decryptor ==========================\n";
 
     fheprac::Decryptor decryptor(context, sk);
     fheprac::Plaintext p1_dc;
@@ -345,7 +356,7 @@ int main()
     encoder.decode(p1_dc, v1_dc);
     encoder.decode(p2_dc, v2_dc);
 
-    cout << "\ndecrypt" << '\n';
+    cout << "\nDecryptor: \n";
 
     bool is_correct_decrypt = true;
     for (int i = 0; i < context.poly_modulus_degree(); i++)
@@ -360,7 +371,7 @@ int main()
     cout << (is_correct_decrypt ? "\ncorrect answer\n" : "\nwrong answer\n");
 
     // modulus switching test
-    cout << "\n========================== BGV Modulus Switching ==========================\n";
+    cout << "\n\n========================== BGV Modulus Switching ==========================\n";
 
     fheprac::Evaluator evaluator(context);
     fheprac::Ciphertext c1_ms = c1;
@@ -372,14 +383,14 @@ int main()
 
     for (int j = 0; j < context.depth(); j++)
     {
-        cout << '\n';
+        cout << "\nModulus Switching: \n";
         cout << "l = " << context.depth() - j << " -> " << context.depth() - j - 1 << '\n';
-        cout << "q: " << c1_ms.param().q() << " -> ";
+        cout << "q: " << c1_ms.params().q() << " -> ";
 
         evaluator.mod_switch(c1_ms, c1_ms);
         evaluator.mod_switch(c2_ms, c2_ms);
 
-        cout << c1_ms.param().q() << '\n';
+        cout << c1_ms.params().q() << '\n';
 
         decryptor.decrypt(c1_ms, p1_ms);
         decryptor.decrypt(c2_ms, p2_ms);
@@ -390,6 +401,7 @@ int main()
         bool is_correct_mod_switch = true;
         for (int i = 0; i < context.poly_modulus_degree(); i++)
         {
+            //cout << v1_ms[i] << ' ' << v2_ms[i] << '\n';
             if (v1[i] != v1_ms[i] || v2[i] != v2_ms[i])
             {
                 is_correct_mod_switch = false;
@@ -399,6 +411,74 @@ int main()
 
         cout << (is_correct_mod_switch ? "\ncorrect answer\n" : "\nwrong answer\n");
     }
+
+    // add test
+    cout << "\n\n========================== BGV Add, Sub, Multiply ==========================\n";
+    fheprac::Ciphertext c3;
+    fheprac::Ciphertext c3_ms;
+    fheprac::Plaintext p3_dc;
+    fheprac::Plaintext p3_ms;
+    vector<int64_t> v3_dc;
+    vector<int64_t> v3_ms;
+
+    evaluator.add(c1, c1, c3);
+    evaluator.sub(c3, c1, c3);
+    evaluator.multiply(c3, c2, c3);
+    //evaluator.multiply(c1, c2, c3);
+
+    decryptor.decrypt(c3, p3_dc);
+    encoder.decode(p3_dc, v3_dc);
+
+    evaluator.mod_switch(c3, c3_ms);
+    decryptor.decrypt(c3_ms, p3_ms);
+    encoder.decode(p3_ms, v3_ms);
+
+    cout << "\nAdd, Sub, Multiply: \n";
+
+    bool is_correct_add = true;
+    for (int i = 0; i < context.poly_modulus_degree(); i++)
+    {
+       // cout << v3_dc[i] << ' ' << v3_ms[i] << '\n';
+        if (v1[i] * 2 != v3_dc[i] || v1[i] * 2 != v3_ms[i])
+        {
+            is_correct_add = false;
+            break;
+        }
+    }
+
+    cout << (is_correct_add ? "\ncorrect answer\n" : "\nwrong answer\n");
+
+
+    cout << "\n\n========================== BGV Relinearize ==========================\n";
+    fheprac::Ciphertext c3_rl;
+    fheprac::Ciphertext c3_rm;
+    fheprac::Plaintext p3_rl;
+    fheprac::Plaintext p3_rm;
+    vector<int64_t> v3_rl;
+    vector<int64_t> v3_rm;
+
+    evaluator.relinearize(c3, rk, c3_rl);
+    decryptor.decrypt(c3_rl, p3_rl);
+    encoder.decode(p3_rl, v3_rl);
+
+    evaluator.mod_switch(c3_rl, c3_rm);
+    decryptor.decrypt(c3_rm, p3_rm);
+    encoder.decode(p3_rm, v3_rm);
+
+    cout << "\nRelinearize: \n";
+
+    bool is_correct_relinearize = true;
+    for (int i = 0; i < context.poly_modulus_degree(); i++)
+    {
+        //cout << v3_rl[i] << ' ' << v3_rm[i] << '\n';
+        if (v1[i] * 2 != v3_rl[i] || v1[i] * 2 != v3_rm[i])
+        {
+            is_correct_relinearize = false;
+            break;
+        }
+    }
+
+    cout << (is_correct_relinearize ? "\ncorrect answer\n" : "\nwrong answer\n");
 
    // matrix_test();
     //vector_test();

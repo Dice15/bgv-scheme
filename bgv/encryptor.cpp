@@ -7,11 +7,11 @@
 
 namespace fheprac
 {
-	Encryptor::Encryptor(Context& context, PublicKey& publickey) :context_(context), pk_(publickey) {}
+	Encryptor::Encryptor(const Context& context, const PublicKey& publickey) :context_(context), pk_(publickey) {}
 
-	void Encryptor::encrypt(Plaintext& plaintext, Ciphertext& destination)
+	void Encryptor::encrypt(const Plaintext& plaintext, Ciphertext& destination) const
 	{
-		EncryptionParameters params = context_.first_param();
+		const EncryptionParameters& params = context_.first_param();
 
 		const uint64_t dep = context_.depth();
 		const uint64_t d = context_.poly_modulus_degree();
@@ -19,7 +19,7 @@ namespace fheprac
 		const uint64_t q = params.q();
 
 		// pt: 평문. (1x1 poly matrix)
-		PolyMatrix pt = plaintext.data();
+		const PolyMatrix& pt = plaintext.data();
 
 		// m: 평문으로 메시지 생성. (2x1 poly matrix)
 		// m = (pt_0 + pt_1*x + ... + pt_(d-1)*x) mod q
@@ -47,7 +47,7 @@ namespace fheprac
 
 		// ct: 암호문 데이터. (2x1 poly matrix)
 		// ct = m + pe + (pk^T)r
-		destination.data() = m + (e * p) + (pk.t() * r);
-		destination.param() = params;
+		destination.data(m + (e * p) + (pk.t() * r));
+		destination.params(params);
 	}
 }

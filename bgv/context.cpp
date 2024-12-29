@@ -1,6 +1,7 @@
 #include "context.h"
 #include <seal/seal.h>
 #include <stdexcept>
+#include <iostream>
 
 namespace fheprac
 {
@@ -59,7 +60,7 @@ namespace fheprac
 
         while (true)
         {
-            if (candidate % rp_factor != 0)
+            if (candidate % rp_factor == 1)
             {
                 return candidate;
             }
@@ -77,7 +78,7 @@ namespace fheprac
         // X는 표준편자가 3.2인 가우시안 분포에서 뽑은 값이다. 따라서 X는 10으로 계산한다.
         // 따라서 p대비 q_chain의 크기를 (p * (2*d*X^2 + d*X))비트 보다 크게 잡으면 충분하다. 
         uint64_t expected = p * ((static_cast<uint64_t>(2) * d * static_cast<uint64_t>(100)) + (d * static_cast<uint64_t>(10)) + static_cast<uint64_t>(1));
-        uint64_t expected_bit = static_cast<uint64_t>(std::log2l(expected)) + static_cast<uint64_t>(1);
+        uint64_t expected_bit = static_cast<uint64_t>(std::log2l(expected * expected)) + static_cast<uint64_t>(1);
         uint64_t q_bound = static_cast<uint64_t>(1) << (expected_bit + 1);
 
         // p와 서로소인 홀수를 (dep + 1)개 찾는다.
@@ -87,7 +88,7 @@ namespace fheprac
         {
             uint64_t q = find_odd_coprime_to_prime(q_bound, p);
             q_chain[i] = q;
-            q_bound = q + 2;
+            q_bound = q + 1;
         }
 
         return q_chain;

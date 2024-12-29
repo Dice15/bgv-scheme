@@ -10,9 +10,9 @@ namespace fheprac
 	class Encryptor
 	{
 	public:
-		Encryptor(Context& context, PublicKey &publickey);
+		Encryptor(const Context& context, const PublicKey &publickey);
 
-		void encrypt(Plaintext& plaintext, Ciphertext& destination);
+		void encrypt(const Plaintext& plaintext, Ciphertext& destination) const;
 
 	private:
 		Context context_;

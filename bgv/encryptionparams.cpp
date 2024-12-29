@@ -4,11 +4,6 @@ namespace fheprac
 {
 	EncryptionParameters::EncryptionParameters(uint64_t q, uint64_t l, uint64_t next_index) :q_(q), l_(l), next_param_index_(next_index) {}
 
-	uint64_t EncryptionParameters::next_param_index() const
-	{
-		return next_param_index_;
-	}
-
 	uint64_t& EncryptionParameters::q()
 	{
 		return q_;
@@ -27,5 +22,10 @@ namespace fheprac
 	const uint64_t& EncryptionParameters::l() const
 	{
 		return l_;
+	}
+
+	uint64_t EncryptionParameters::next_param_index() const
+	{
+		return next_param_index_;
 	}
 }

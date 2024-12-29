@@ -10,9 +10,9 @@ namespace fheprac
 	class Decryptor
 	{
 	public:
-		Decryptor(Context& context, SecretKey& secretkey);
+		Decryptor(const Context& context, const SecretKey& secretkey);
 
-		void decrypt(Ciphertext& ciphertext, Plaintext& destination);
+		void decrypt(const Ciphertext& ciphertext, Plaintext& destination) const;
 
 	private:
 		Context context_;

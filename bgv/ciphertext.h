@@ -11,15 +11,29 @@ namespace fheprac
 	public:
 		Ciphertext() = default;
 
-		Ciphertext(PolyMatrix poly_matrix);
+		Ciphertext(const size_t size, const Context& context, const EncryptionParameters& params);
 
-		PolyMatrix& data();
+		void assign(const size_t size, const Context& context, const EncryptionParameters& params);
 
-		EncryptionParameters& param();
+		void reset(const size_t size, const Context& context, const EncryptionParameters& params);
+
+		size_t size() const;
+
+		const PolyMatrix& data() const;
+
+		uint64_t data(const size_t row, const size_t col, const size_t index) const;
+
+		void data(const PolyMatrix& poly_matrix);
+
+		void data(const size_t row, const size_t col, const size_t index, const uint64_t value);
+
+		const EncryptionParameters& params() const;
+
+		void params(const EncryptionParameters& params);
 
 	private:
 		PolyMatrix ct_;
 
-		EncryptionParameters param_;
+		EncryptionParameters params_;
 	};
 }

@@ -10,8 +10,6 @@ namespace fheprac
 
 		EncryptionParameters(uint64_t q, uint64_t l, uint64_t next_index);
 
-		uint64_t next_param_index() const;
-
 		uint64_t& q();
 
 		const uint64_t& q() const;
@@ -20,11 +18,13 @@ namespace fheprac
 
 		const uint64_t& l() const;
 
-	private:
-		uint64_t next_param_index_;
+		uint64_t next_param_index() const;
 
+	private:
 		uint64_t q_;
 
 		uint64_t l_;   // level
+
+		uint64_t next_param_index_;
 	};
 }

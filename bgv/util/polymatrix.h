@@ -11,15 +11,15 @@ namespace fheprac
 	public:
 		PolyMatrix();
 
-		PolyMatrix(uint64_t row_size, uint64_t col_size, uint64_t degree, uint64_t modulus, uint64_t value = 0);
+		PolyMatrix(const size_t row_size, const size_t col_size, const uint64_t degree, const uint64_t modulus, const uint64_t value = 0);
 
-		uint64_t get(uint64_t row, uint64_t col, uint64_t index) const;
+		uint64_t get(const size_t row, const size_t col, const size_t index) const;
 
-		Polynomial get(uint64_t row, uint64_t col) const;
+		Polynomial get(const size_t row, const size_t col) const;
 
-		void set(uint64_t row, uint64_t col, uint64_t index, uint64_t value);
+		void set(const size_t row, const size_t col, const size_t index, const uint64_t value);
 
-		void set(uint64_t row, uint64_t col, Polynomial poly);
+		void set(const size_t row, const size_t col, const Polynomial& poly);
 
 		uint64_t row_size() const;
 
@@ -29,9 +29,9 @@ namespace fheprac
 
 		uint64_t modulus() const;
 
-		void assign(uint64_t row_size, uint64_t col_size, uint64_t degree, uint64_t modulus, uint64_t value = 0);
+		void assign(const size_t row_size, const size_t col_size, const uint64_t degree, const  uint64_t modulus, const uint64_t value = 0);
 
-		void reset(uint64_t row_size, uint64_t col_size, uint64_t degree, uint64_t modulus, uint64_t value = 0);
+		void reset(const size_t row_size, const size_t col_size, const uint64_t degree, const uint64_t modulus, const uint64_t value = 0);
 
 		PolyMatrix t() const;
 

@@ -6,12 +6,12 @@ namespace fheprac
 {
 	Polynomial::Polynomial() :deg_(0), mod_(0) {}
 
-	Polynomial::Polynomial(uint64_t degree, uint64_t modulus, uint64_t value) :deg_(degree), mod_(modulus)
+	Polynomial::Polynomial(const uint64_t degree, const uint64_t modulus, const uint64_t value) :deg_(degree), mod_(modulus)
 	{
 		coeffs_.assign(deg_ + 1, value);
 	}
 
-	uint64_t Polynomial::get(uint64_t index) const
+	uint64_t Polynomial::get(const size_t index) const
 	{
 		if (index >= coeffs_.size())
 		{
@@ -26,7 +26,7 @@ namespace fheprac
 		return coeffs_;
 	}
 
-	void Polynomial::set(uint64_t index, uint64_t value)
+	void Polynomial::set(const size_t index, const uint64_t value)
 	{
 		if (index >= coeffs_.size())
 		{
@@ -36,9 +36,9 @@ namespace fheprac
 		coeffs_[index] = value % mod_;
 	}
 
-	void Polynomial::set(std::vector<uint64_t> coeffients)
+	void Polynomial::set(const std::vector<uint64_t>& coeffients)
 	{
-		for (uint64_t i = 0; i < coeffients.size(); i++)
+		for (size_t i = 0; i < coeffients.size(); i++)
 		{
 			set(i, coeffients[i]);
 		}
@@ -54,14 +54,14 @@ namespace fheprac
 		return mod_;
 	}
 
-	void Polynomial::assign(uint64_t degree, uint64_t modulus, uint64_t value)
+	void Polynomial::assign(const uint64_t degree, const uint64_t modulus, const uint64_t value)
 	{
 		deg_ = degree;
 		mod_ = modulus;
 		coeffs_.assign(deg_ + 1, value);
 	}
 
-	void Polynomial::reset(uint64_t degree, uint64_t modulus, uint64_t value)
+	void Polynomial::reset(const uint64_t degree, const uint64_t modulus, const uint64_t value)
 	{
 		uint64_t mod_prev = mod_;
 		uint64_t mod_prev_h = mod_prev >> 1;
@@ -71,7 +71,7 @@ namespace fheprac
 		mod_ = modulus;
 		coeffs_.resize(deg_ + 1, value);
 
-		for (uint64_t i = 0; i <= deg_; i++)
+		for (size_t i = 0; i <= deg_; i++)
 		{
 			uint64_t coeff = coeffs_[i];
 

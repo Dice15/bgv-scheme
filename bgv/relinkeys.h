@@ -8,13 +8,20 @@ namespace fheprac
 	class RelinKeys
 	{
 	public:
-		RelinKeys();
+		RelinKeys() = default;
 
-		RelinKeys(std::vector<PolyMatrix>& poly_matrix);
+		RelinKeys(const size_t key_count);
 
-		PolyMatrix& data(int64_t level);  // T_(s_l -> s_(l-1))
+		void assign(const size_t key_count);
+
+		size_t count() const;
+
+		const PolyMatrix& data(const size_t level) const;
+
+		void data(const size_t level, const PolyMatrix& poly_matrix);
+
 
 	private:
-		std::vector<PolyMatrix> rk_;
+		std::vector<PolyMatrix> rk_;   // T_(s x s -> s)
 	};
 }

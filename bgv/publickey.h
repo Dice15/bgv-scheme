@@ -8,11 +8,17 @@ namespace fheprac
 	class PublicKey
 	{
 	public:
-		PublicKey();
+		PublicKey() = default;
 
-		PublicKey(std::vector<PolyMatrix>& poly_matrix);
+		PublicKey(const size_t key_count);
 
-		PolyMatrix& data(int64_t level);
+		void assign(const size_t key_count);
+
+		size_t count() const;
+
+		const PolyMatrix& data(const size_t level) const;
+
+		void data(const size_t level, const PolyMatrix& poly_matrix);
 
 	private:
 		std::vector<PolyMatrix> pk_;

@@ -8,11 +8,11 @@ namespace fheprac
 	class Encoder
 	{
 	public:
-		Encoder(Context& context);
+		Encoder(const Context& context);
 
-		void encode(std::vector<int64_t>& message, Plaintext& destination) const;
+		void encode(const std::vector<int64_t>& message, Plaintext& destination) const;
 
-		void decode(Plaintext& plaintext, std::vector<int64_t>& destination) const;
+		void decode(const Plaintext& plaintext, std::vector<int64_t>& destination) const;
 
 	private:
 		Context context_;

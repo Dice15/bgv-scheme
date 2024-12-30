@@ -58,7 +58,7 @@ namespace fheprac
 		// 균등 분포 [0, q-1] 정수.
 		std::random_device rd;
 		std::mt19937 rand(rd());
-		std::uniform_int_distribution<uint64_t> dist(0, q - static_cast<uint64_t>(1));
+		std::uniform_int_distribution<uint64_t> dist(0, q - uint64_t(1));
 
 		return dist(rand);
 	}
@@ -70,7 +70,7 @@ namespace fheprac
 		// 균등 분포 [0, q-1] 정수.
 		std::random_device rd;
 		std::mt19937 rand(rd());
-		std::uniform_int_distribution<uint64_t> dist(0, q - static_cast<uint64_t>(1));
+		std::uniform_int_distribution<uint64_t> dist(0, q - uint64_t(1));
 
 		// R = Z[x] / x^d + 1
 		Polynomial destination(context.poly_modulus_degree() - static_cast<uint64_t>(1), q);

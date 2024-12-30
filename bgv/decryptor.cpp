@@ -1,5 +1,6 @@
 #include "decryptor.h"
 #include <vector>
+#include <iostream>
 
 namespace fheprac
 {

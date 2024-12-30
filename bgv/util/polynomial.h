@@ -14,7 +14,7 @@ namespace fheprac
 
 		uint64_t get(const size_t index) const;
 
-		std::vector<uint64_t> get() const;
+		const std::vector<uint64_t>& get() const;
 
 		void set(const size_t index, const uint64_t value);
 

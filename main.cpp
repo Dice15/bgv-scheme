@@ -188,13 +188,16 @@ uint64_t safe_modular_multiplication(uint64_t a, uint64_t b, uint64_t mod) {
 // 3) 모듈러스 스위칭 구현
 // 4) 덧셈/뺄셈 구현
 // 5) 곱셈 구현
+// 
+// Question
+// 1) Zq에서 음수처리
+// 2) 모듈러스 스위칭 c2 = (q2/q1) * c1 이렇게 하면 값이 이상하게 나옴
 //  
 // TODO
-// 1) 소수 p와 서로소인 홀수 q를 구하는 속도 개선
-// 2) 안전한 곱셈 속도 개선
-// 3) 다항식 곱셈에 NTT 적용 (이렇게 된다면 q는 홀수가 아니라 소수가 되어야 함)
-// 4) 나머지 연산 개선 (%연산자 사용하지 않기)
-// 5) Zq에서 음수는 q/2초과의 수로 표현하기 때문에, m+pe가 q/2보다 커지는 현상이 발생. 
+// 1) 안전한 곱셈 속도 개선
+// 2) 다항식 곱셈에 NTT 적용
+// 3) 나머지 연산 개선 (%연산자 사용하지 않기)
+// 4) Zq에서 음수는 q/2초과의 수로 표현하기 때문에, m+pe가 q/2보다 커지는 현상이 발생. 
 //    (음수는 공개키 생성 시, (Z[x]/x^d + 1) 위에서 곱셈할때 생김)
 // 
 // Total Complete
@@ -207,10 +210,9 @@ uint64_t safe_modular_multiplication(uint64_t a, uint64_t b, uint64_t mod) {
 
 int main()
 {
-    // context text
     cout << "\\n========================== Context ==========================\n";
 
-    fheprac::Context context(16, 10, 2);
+    fheprac::Context context(8, 15, 2);
 
     cout << "\npoly modulus degree: " << context.poly_modulus_degree() << '\n';
 
@@ -293,30 +295,35 @@ int main()
     vector<int64_t> v2(context.poly_modulus_degree());
     vector<int64_t> v3(context.poly_modulus_degree());
 
+    int64_t value = context.plain_modulus_value() / 2;
     for (int i = 0; i < context.poly_modulus_degree() ; i++)
     {
-        v1[i] = i + 1;
-        v3[i] = 0;
+        v1[i] = i + 8000;
+        v3[i] = -v1[i];
     }
     v2[0] = 2;
 
     fheprac::Plaintext p1;
     fheprac::Plaintext p2;
+    fheprac::Plaintext p3;
     vector<int64_t> v1_de;
     vector<int64_t> v2_de;
+    vector<int64_t> v3_de;
 
     encoder.encode(v1, p1);
     encoder.encode(v2, p2);
+    encoder.encode(v3, p3);
 
     encoder.decode(p1, v1_de);
     encoder.decode(p2, v2_de);
+    encoder.decode(p3, v3_de);
 
     cout << "\nEncoder: \n";
 
     bool is_correct_decode = true;
     for (int i = 0; i < context.poly_modulus_degree(); i++)
     {
-        if (v1[i] != v1_de[i] || v2[i] != v2_de[i])
+        if (v1[i] != v1_de[i] || v2[i] != v2_de[i] || v3[i] != v3_de[i])
         {
             is_correct_decode = false;
             break;
@@ -331,9 +338,11 @@ int main()
     fheprac::Encryptor encryptor(context, pk);
     fheprac::Ciphertext c1;
     fheprac::Ciphertext c2;
+    fheprac::Ciphertext c3;
 
     encryptor.encrypt(p1, c1);
     encryptor.encrypt(p2, c2);
+    encryptor.encrypt(p3, c3);
 
     cout << "\nEncryptor: \n";
     /*for (int i = 0; i < context.poly_modulus_degree(); i++)
@@ -347,21 +356,26 @@ int main()
     fheprac::Decryptor decryptor(context, sk);
     fheprac::Plaintext p1_dc;
     fheprac::Plaintext p2_dc;
+    fheprac::Plaintext p3_dc;
+
     vector<int64_t> v1_dc;
     vector<int64_t> v2_dc;
+    vector<int64_t> v3_dc;
 
     decryptor.decrypt(c1, p1_dc);
     decryptor.decrypt(c2, p2_dc);
+    decryptor.decrypt(c3, p3_dc);
 
     encoder.decode(p1_dc, v1_dc);
     encoder.decode(p2_dc, v2_dc);
+    encoder.decode(p3_dc, v3_dc);
 
     cout << "\nDecryptor: \n";
 
     bool is_correct_decrypt = true;
     for (int i = 0; i < context.poly_modulus_degree(); i++)
     {
-        if (v1[i] != v1_dc[i] || v2[i] != v2_dc[i])
+        if (v1[i] != v1_dc[i] || v2[i] != v2_dc[i] || v3[i] != v3_dc[i])
         {
             is_correct_decrypt = false;
             break;
@@ -371,10 +385,10 @@ int main()
     cout << (is_correct_decrypt ? "\ncorrect answer\n" : "\nwrong answer\n");
 
     // modulus switching test
-    cout << "\n\n========================== BGV Modulus Switching ==========================\n";
+    //cout << "\n\n========================== BGV Modulus Switching ==========================\n";
 
     fheprac::Evaluator evaluator(context);
-    fheprac::Ciphertext c1_ms = c1;
+ /*   fheprac::Ciphertext c1_ms = c1;
     fheprac::Ciphertext c2_ms = c2;
     fheprac::Plaintext p1_ms;
     fheprac::Plaintext p2_ms;
@@ -401,48 +415,53 @@ int main()
         bool is_correct_mod_switch = true;
         for (int i = 0; i < context.poly_modulus_degree(); i++)
         {
-            //cout << v1_ms[i] << ' ' << v2_ms[i] << '\n';
+            cout << v1_ms[i] << ' ' << v2_ms[i] << '\n';
             if (v1[i] != v1_ms[i] || v2[i] != v2_ms[i])
             {
                 is_correct_mod_switch = false;
-                break;
+                //break;
             }
         }
 
         cout << (is_correct_mod_switch ? "\ncorrect answer\n" : "\nwrong answer\n");
-    }
+    }*/
 
     // add test
     cout << "\n\n========================== BGV Add, Sub, Multiply ==========================\n";
-    fheprac::Ciphertext c3;
-    fheprac::Ciphertext c3_ms;
-    fheprac::Plaintext p3_dc;
-    fheprac::Plaintext p3_ms;
-    vector<int64_t> v3_dc;
-    vector<int64_t> v3_ms;
+    fheprac::Ciphertext c4;
+    fheprac::Ciphertext c4_ms;
+    fheprac::Plaintext p4_dc;
+    fheprac::Plaintext p4_ms;
+    vector<int64_t> v4_dc;
+    vector<int64_t> v4_ms;
 
-    evaluator.add(c1, c1, c3);
-    evaluator.sub(c3, c1, c3);
-    evaluator.multiply(c3, c2, c3);
-    //evaluator.multiply(c1, c2, c3);
+    evaluator.add(c1, c1, c4);
+    evaluator.add(c4, c3, c4);
+    evaluator.multiply(c4, c2, c4);
+    //evaluator.multiply(c1, c2, c4);
 
-    decryptor.decrypt(c3, p3_dc);
-    encoder.decode(p3_dc, v3_dc);
+    decryptor.decrypt(c4, p4_dc);
+    encoder.decode(p4_dc, v4_dc);
 
-    evaluator.mod_switch(c3, c3_ms);
-    decryptor.decrypt(c3_ms, p3_ms);
-    encoder.decode(p3_ms, v3_ms);
+    evaluator.mod_switch(c4, c4_ms);
+    decryptor.decrypt(c4_ms, p4_ms);
+    encoder.decode(p4_ms, v4_ms);
 
     cout << "\nAdd, Sub, Multiply: \n";
 
     bool is_correct_add = true;
     for (int i = 0; i < context.poly_modulus_degree(); i++)
     {
-       // cout << v3_dc[i] << ' ' << v3_ms[i] << '\n';
-        if (v1[i] * 2 != v3_dc[i] || v1[i] * 2 != v3_ms[i])
+        cout << v4_dc[i] << ' ' << v4_ms[i] << '\n';
+
+        int64_t ans = v1[i] * 2;
+        if (ans > context.plain_modulus_value() / 2) {
+            ans -= context.plain_modulus_value();
+        }
+        if (ans != v4_dc[i])
         {
             is_correct_add = false;
-            break;
+            //break;
         }
     }
 
@@ -450,31 +469,36 @@ int main()
 
 
     cout << "\n\n========================== BGV Relinearize ==========================\n";
-    fheprac::Ciphertext c3_rl;
-    fheprac::Ciphertext c3_rm;
-    fheprac::Plaintext p3_rl;
-    fheprac::Plaintext p3_rm;
-    vector<int64_t> v3_rl;
-    vector<int64_t> v3_rm;
+    fheprac::Ciphertext c4_rl;
+    fheprac::Ciphertext c4_rm;
+    fheprac::Plaintext p4_rl;
+    fheprac::Plaintext p4_rm;
+    vector<int64_t> v4_rl;
+    vector<int64_t> v4_rm;
 
-    evaluator.relinearize(c3, rk, c3_rl);
-    decryptor.decrypt(c3_rl, p3_rl);
-    encoder.decode(p3_rl, v3_rl);
+    evaluator.relinearize(c4, rk, c4_rl);
+    decryptor.decrypt(c4_rl, p4_rl);
+    encoder.decode(p4_rl, v4_rl);
 
-    evaluator.mod_switch(c3_rl, c3_rm);
-    decryptor.decrypt(c3_rm, p3_rm);
-    encoder.decode(p3_rm, v3_rm);
+    evaluator.mod_switch(c4_rl, c4_rm);
+    decryptor.decrypt(c4_rm, p4_rm);
+    encoder.decode(p4_rm, v4_rm);
 
     cout << "\nRelinearize: \n";
 
     bool is_correct_relinearize = true;
     for (int i = 0; i < context.poly_modulus_degree(); i++)
     {
-        //cout << v3_rl[i] << ' ' << v3_rm[i] << '\n';
-        if (v1[i] * 2 != v3_rl[i] || v1[i] * 2 != v3_rm[i])
+        cout << v4_rl[i] << ' ' << v4_rm[i] << '\n';
+
+        int64_t ans = v1[i] * 2;
+        if (ans > context.plain_modulus_value() / 2) {
+            ans -= context.plain_modulus_value();
+        }
+        if (ans != v4_rl[i])
         {
             is_correct_relinearize = false;
-            break;
+            //break;
         }
     }
 

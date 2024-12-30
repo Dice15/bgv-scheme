@@ -21,7 +21,7 @@ namespace fheprac
 		return coeffs_[index];
 	}
 
-	std::vector<uint64_t> Polynomial::get() const
+	const std::vector<uint64_t>& Polynomial::get() const
 	{
 		return coeffs_;
 	}

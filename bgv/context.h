@@ -23,7 +23,9 @@ namespace fheprac
 		EncryptionParameters param(uint64_t index) const;
 
 	private:
-		uint64_t find_odd_coprime_to_prime(uint64_t min_val, uint64_t rp_factor) const;
+		uint64_t get_prime(const uint64_t factor, const int bit_size) const;
+
+		uint64_t get_relatively_prime_odd(uint64_t min_val, uint64_t rp_factor) const;
 
 		std::vector<uint64_t> create_modulus_chain() const;
 

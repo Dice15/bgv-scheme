@@ -9,7 +9,7 @@ namespace fheprac
     {
         deg_ = poly_modulus_degree;
 
-        plain_mod_ = seal::PlainModulus::Batching(poly_modulus_degree, plain_modulus_bit_size).value();
+        plain_mod_ = get_prime(poly_modulus_degree, plain_modulus_bit_size);
 
         dep_ = depth;
 
@@ -54,7 +54,35 @@ namespace fheprac
         return params_[index];
     }
 
-    uint64_t Context::find_odd_coprime_to_prime(uint64_t bound, uint64_t rp_factor) const
+    uint64_t Context::get_prime(const uint64_t factor, const int bit_size) const
+    {
+        // Start with (2^bit_size - 1) / factor * factor + 1
+        uint64_t value = ((uint64_t(0x1) << bit_size) - 1) / factor * factor + 1;
+        uint64_t lower_bound = uint64_t(0x1) << (bit_size - 1);
+        bool found = false;
+
+        while (value > lower_bound)
+        {
+            seal::Modulus new_mod(value);
+
+            if (new_mod.is_prime())
+            {
+                found = true;
+                break;
+            }
+
+            value += factor;
+        }
+
+        if (found == false)
+        {
+            throw std::logic_error("failed to find enough qualifying primes");
+        }
+
+        return value;
+    }
+
+    uint64_t Context::get_relatively_prime_odd(const uint64_t bound, const uint64_t rp_factor) const
     {
         uint64_t candidate = (bound % 2 == 0) ? bound + 1 : bound;
 
@@ -74,19 +102,30 @@ namespace fheprac
         uint64_t p = plain_mod_;
         uint64_t d = deg_;
 
-        // 암호화, 복호화 과정에서 대략 누적 오차가 약 p * (d*X) * (2*X+1) = p * (2*d*X^2 + d*X)이 발생한다.
-        // X는 표준편자가 3.2인 가우시안 분포에서 뽑은 값이다. 따라서 X는 10으로 계산한다.
-        // 따라서 p대비 q_chain의 크기를 (p * (2*d*X^2 + d*X))비트 보다 크게 잡으면 충분하다. 
-        uint64_t expected = p * ((static_cast<uint64_t>(2) * d * static_cast<uint64_t>(100)) + (d * static_cast<uint64_t>(10)) + static_cast<uint64_t>(1));
-        uint64_t expected_bit = static_cast<uint64_t>(std::log2l(expected * expected)) + static_cast<uint64_t>(1);
-        uint64_t q_bound = static_cast<uint64_t>(1) << (expected_bit + 1);
+        // 최대 누적 오차 (X는 표준편자가 3.2인 가우시안 분포에서 뽑은 값이다. 따라서 X는 10으로 계산한다.)
+        //    - 기본: 약 p * (X^2*d + X^2*d + X)이 발생한다.
+        //    - 곱셈: 약 p^2 * (4*X^4*d^3 + 4*X^3*d^2 + 5*X^2*d + 2*X)
+        // 따라서 p대비 q_chain의 크기를 (p^2 * (4*X^4*d^3 + 4*X^3*d^2 + 5*X^2*d + 2*X + 1))보다 크게 잡으면 충분하다.
+        uint64_t expected_c_size = (p * p) * (
+            + (static_cast<uint64_t>(40000) * d * d * d)
+            + (static_cast<uint64_t>(4000) * d * d)
+            + (static_cast<uint64_t>(500) * d)
+            + 20
+            + 1);
+
+        uint64_t expected_c_size_bit = static_cast<uint64_t>(std::log2l(expected_c_size)) + static_cast<uint64_t>(1);
+        uint64_t q_bound = static_cast<uint64_t>(1) << (expected_c_size_bit + 2);
+
+        //std::cout << expected_c_size_bit << '\n';
+        //std::cout << expected_c_size << '\n';
+        //std::cout << q_bound << '\n';
 
         // p와 서로소인 홀수를 (dep + 1)개 찾는다.
         std::vector<uint64_t> q_chain(dep + 1);
 
         for (uint64_t i = 0; i < q_chain.size(); i++)
         {
-            uint64_t q = find_odd_coprime_to_prime(q_bound, p);
+            uint64_t q = get_relatively_prime_odd(q_bound, p);
             q_chain[i] = q;
             q_bound = q + 1;
         }

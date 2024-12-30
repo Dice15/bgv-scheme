@@ -162,29 +162,18 @@ namespace fheprac
         /*
         * 계산 정확도를 위해 소수점을 사용하지 않고 계산.
         * Origin code. (using point)
-        uint64_t scaled = ((value * next_q) + curr_q_h) / curr_q;
-        uint64_t diff = scaled - value;
-        uint64_t ratio = static_cast<uint64_t>(std::llround(static_cast<double_t>(diff) / static_cast<double_t>(p)));
-        uint64_t result = value + (ratio * p);
+        uint64_t scaled = {(value * next_q) + (curr_q / 2)} / curr_q;
         */
 
+        uint64_t high1, low1, carry, remainder;
+
         // scaled = {(value * next_q) + (curr_q / 2)} / curr_q.
-        uint64_t high, low, carry, remainder, scaled;
-        low = _umul128(value, next_q, &high);
-        carry = (low + curr_q_h < low);
-        low += curr_q_h;
-        high += carry;
-        scaled = _udiv128(high, low, curr_q, &remainder);
+        low1 = _umul128(value, next_q, &high1);
+        carry = (low1 + curr_q_h < low1);
+        low1 += curr_q_h;
+        high1 += carry;
+        uint64_t scaled = _udiv128(high1, low1, curr_q, &remainder);
 
-        // diff = scaled - value.
-        uint64_t diff = value - scaled;
-
-        // ratio = (diff + p_h) / p.
-        uint64_t ratio = (diff + p_h) / p;
-
-        // result = value + (ratio * p).
-        uint64_t result = value - (ratio * p);
-
-        return result;
+        return scaled;
     }
 }

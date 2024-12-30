@@ -1,6 +1,7 @@
 #include "encoder.h"
 #include "util/polymatrix.h"
 #include <stdexcept>
+#include <iostream>
 
 namespace fheprac
 {

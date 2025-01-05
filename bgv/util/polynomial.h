@@ -47,10 +47,6 @@ namespace fheprac
 		void operator*=(const uint64_t& other);
 
 	private:
-		uint64_t negate_coeff(uint64_t coeff) const;
-
-		uint64_t safe_coeff_multiply(uint64_t coeff1, uint64_t coeff2) const;
-
 		std::vector<uint64_t> coeffs_;
 
 		uint64_t deg_;

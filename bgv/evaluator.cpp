@@ -1,5 +1,6 @@
 #include "evaluator.h"
 #include "encryptionparams.h"
+#include "util/safeoperation.h"
 #include <stdexcept>
 #include <iostream>
 #include <intrin.h>
@@ -29,16 +30,16 @@ namespace fheprac
 
         // curr_q > next_q > p and curr_q = next_q = 1 mod p.
         // [<ct', s>]_next_q = [<ct, s>]_curr_q mod p.
-        // ct' = closest((curr_q / next_q) * ct) mod p.
+        // ct' = closet((curr_q / next_q) * ct) mod p.
         for (uint64_t row = 0; row < ct_dot.row_size(); row++)
         {
             for (uint64_t col = 0; col < ct_dot.col_size(); col++)
             {
                 for (uint64_t i = 0; i <= ct_dot.degree(); i++)
                 {
-                    const uint64_t coeff_curr_q = ct.get(row, col, i);
-                    const uint64_t coeff_next_q = drop_to_next_q(coeff_curr_q, curr_q, next_q, p);
-                    ct_dot.set(row, col, i, coeff_next_q);
+                    const uint64_t coeff_curr = ct.get(row, col, i);
+                    const uint64_t coeff_next = drop_to_next_q(coeff_curr, curr_q, next_q, p);
+                    ct_dot.set(row, col, i, coeff_next);
                 }
             }
         }
@@ -133,7 +134,7 @@ namespace fheprac
 
         if (ciphertext1.size() != static_cast<size_t>(2))
         {
-            throw std::out_of_range("Only 2 size of ciphertext can multiply."); // 오직 크기가 2인 암호문만 곱셈연산이 가능합니다.
+            throw std::out_of_range("Only ciphertexts of size 2 can be multiplied.");
         }
 
         const EncryptionParameters& params = ciphertext1.params();
@@ -154,26 +155,40 @@ namespace fheprac
         destination.params(ciphertext1.params());
     }
 
-    uint64_t Evaluator::drop_to_next_q(const uint64_t value, const uint64_t curr_q, const uint64_t next_q, const uint64_t p) const
+    uint64_t Evaluator::drop_to_next_q(uint64_t value, const uint64_t curr_q, const uint64_t next_q, const uint64_t p) const
     {
         const uint64_t curr_q_h = curr_q >> 1;
         const uint64_t p_h = p >> 1;
-   
+
+        bool sign = false;
+        uint64_t val = value;
+
+        if (val > curr_q_h)
+        {
+            val = curr_q - val;
+            sign = true;
+        }
+
         /*
         * 계산 정확도를 위해 소수점을 사용하지 않고 계산.
-        * Origin code. (using point)
-        uint64_t scaled = {(value * next_q) + (curr_q / 2)} / curr_q;
+        * scaled = (value * next_q) / curr_q          // value에 q[i] / q[i+1]를 곱하고 소수점 버림.
+        * diif = value - scaled * (curr_q / next_q)   // 손실값 계산.
+        * result = scaled + diff                      // 손실값 복원.
         */
+        uint64_t scaled, diif, result, high, low, remainder;
+        mul_safe(val, next_q, low, high);
+        div_safe(high, low, curr_q, scaled, remainder);
+        diif = val - (scaled * (curr_q / next_q));
+        result = scaled + diif;
+        
+        // TEST
+        std::cout << val << " -> " << result << " (diff: " << diif << ", scaled: " << scaled << ")" << "\n";
 
-        uint64_t high1, low1, carry, remainder;
+        if (sign)
+        {
+            result = curr_q - result;
+        }
 
-        // scaled = {(value * next_q) + (curr_q / 2)} / curr_q.
-        low1 = _umul128(value, next_q, &high1);
-        carry = (low1 + curr_q_h < low1);
-        low1 += curr_q_h;
-        high1 += carry;
-        uint64_t scaled = _udiv128(high1, low1, curr_q, &remainder);
-
-        return scaled;
+        return result;
     }
 }

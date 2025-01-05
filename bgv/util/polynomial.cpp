@@ -1,4 +1,5 @@
 #include "polynomial.h"
+#include "safeoperation.h"
 #include <stdexcept>
 #include <iostream>
 
@@ -99,7 +100,7 @@ namespace fheprac
 
 		for (uint64_t i = 0; i <= deg_; i++)
 		{
-			destination.coeffs_[i] = (coeffs_[i] + other.coeffs_[i]) % mod_;
+			destination.coeffs_[i] = add_mod_safe(coeffs_[i], other.coeffs_[i], mod_);
 		}
 
 		return destination;
@@ -114,8 +115,7 @@ namespace fheprac
 
 		for (uint64_t i = 0; i <= deg_; i++)
 		{
-			coeffs_[i] += other.coeffs_[i];
-			coeffs_[i] %= mod_;
+			coeffs_[i] = add_mod_safe(coeffs_[i], other.coeffs_[i], mod_);
 		}
 	}
 
@@ -130,7 +130,7 @@ namespace fheprac
 
 		for (uint64_t i = 0; i <= deg_; i++)
 		{
-			destination.coeffs_[i] = (coeffs_[i] + negate_coeff(other.coeffs_[i])) % mod_;
+			destination.coeffs_[i] = add_mod_safe(coeffs_[i], negate_mod_safe(other.coeffs_[i], mod_), mod_);
 		}
 
 		return destination;
@@ -145,8 +145,7 @@ namespace fheprac
 
 		for (uint64_t i = 0; i <= deg_; i++)
 		{
-			coeffs_[i] += negate_coeff(other.coeffs_[i]);
-			coeffs_[i] %= mod_;
+			coeffs_[i] = add_mod_safe(coeffs_[i], negate_mod_safe(other.coeffs_[i], mod_), mod_);
 		}
 	}
 
@@ -156,7 +155,7 @@ namespace fheprac
 
 		for (uint64_t i = 0; i <= deg_; i++)
 		{
-			destination.coeffs_[i] = negate_coeff(coeffs_[i]);
+			destination.coeffs_[i] = negate_mod_safe(coeffs_[i], mod_);
 		}
 
 		return destination;
@@ -176,8 +175,7 @@ namespace fheprac
 		{
 			for (uint64_t j = 0; j <= deg_; ++j)
 			{
-				destination.coeffs_[i + j] += safe_coeff_multiply(coeffs_[i], other.coeffs_[j]) % mod_;
-				destination.coeffs_[i + j] %= mod_;
+				destination.coeffs_[i + j] = add_mod_safe(destination.coeffs_[i + j], mul_mod_safe(coeffs_[i], other.coeffs_[j], mod_), mod_);
 			}
 		}
 
@@ -190,8 +188,7 @@ namespace fheprac
 				// R = Z[x] / x^d + 1
 				// x^i = x^red * x^(i-red) = -1 * x^(i-red)
 				// -1 * x^(i-red) + x^(i-red)
-				destination.coeffs_[i - red] += negate_coeff(destination.coeffs_[i]);
-				destination.coeffs_[i - red] %= mod_;
+				destination.coeffs_[i - red] = add_mod_safe(destination.coeffs_[i - red], negate_mod_safe(destination.coeffs_[i], mod_), mod_);
 				destination.coeffs_[i] = 0;
 			}
 		}
@@ -208,7 +205,7 @@ namespace fheprac
 
 		for (uint64_t i = 0; i <= deg_; i++)
 		{
-			destination.coeffs_[i] = safe_coeff_multiply(coeffs_[i], other) % mod_;
+			destination.coeffs_[i] = mul_mod_safe(coeffs_[i], other, mod_);
 		}
 
 		return destination;
@@ -227,8 +224,7 @@ namespace fheprac
 		{
 			for (uint64_t j = 0; j <= deg_; ++j)
 			{
-				destination.coeffs_[i + j] += safe_coeff_multiply(coeffs_[i], other.coeffs_[j]) % mod_;
-				destination.coeffs_[i + j] %= mod_;
+				destination.coeffs_[i + j] = add_mod_safe(destination.coeffs_[i + j], mul_mod_safe(coeffs_[i], other.coeffs_[j], mod_), mod_);
 			}
 		}
 
@@ -241,8 +237,7 @@ namespace fheprac
 				// R = Z[x] / x^d + 1
 				// x^i = x^red * x^(i-red) = -1 * x^(i-red)
 				// -1 * x^(i-red) + x^(i-red)
-				destination.coeffs_[i - red] += negate_coeff(destination.coeffs_[i]);
-				destination.coeffs_[i - red] %= mod_;
+				destination.coeffs_[i - red] = add_mod_safe(destination.coeffs_[i - red], negate_mod_safe(destination.coeffs_[i], mod_), mod_);
 				destination.coeffs_[i] = 0;
 			}
 		}
@@ -257,34 +252,7 @@ namespace fheprac
 	{
 		for (uint64_t i = 0; i <= deg_; i++)
 		{
-			coeffs_[i] = safe_coeff_multiply(coeffs_[i], other) % mod_;
+			coeffs_[i] = mul_mod_safe(coeffs_[i], other, mod_);
 		}
-	}
-
-	uint64_t Polynomial::negate_coeff(uint64_t coeff) const
-	{
-		return mod_ - (coeff % mod_);
-	}
-
-	uint64_t Polynomial::safe_coeff_multiply(uint64_t coeff1, uint64_t coeff2) const 
-	{
-		uint64_t destination = 0;
-
-		while (coeff2 > 0) 
-		{
-			// coeff2의 마지막 비트가 1인 경우, destination에 coeff1을 추가
-			if (coeff2 & 1) 
-			{
-				destination = (destination + coeff1) % mod_;
-			}
-
-			// coeff1을 2배로 증가시키고 모듈러스 연산 적용
-			coeff1 = (coeff1 << 1) % mod_;
-
-			// coeff2의 다음 비트로 이동
-			coeff2 >>= 1;
-		}
-
-		return destination;
 	}
 }

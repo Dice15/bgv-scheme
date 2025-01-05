@@ -22,7 +22,7 @@ namespace fheprac
 		void multiply(const Ciphertext& ciphertext1, const Ciphertext& ciphertext2, Ciphertext& destination) const;
 
 	private:
-		uint64_t drop_to_next_q(const uint64_t value, const uint64_t curr_q, const uint64_t next_q, const uint64_t p) const;
+		uint64_t drop_to_next_q(uint64_t value, const uint64_t curr_q, const uint64_t next_q, const uint64_t p) const;
 
 		Context context_;
 	};

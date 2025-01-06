@@ -74,53 +74,17 @@ namespace fheprac
 		PolyMatrix rk;
 		destination.assign(dep + 1);
 
-		// 하나의 재선형화 키 생성.
+		// 하나의 비밀키에 대해 재선형화 키 생성.
 		for (size_t j = 0; j <= dep; j++)
 		{
 			const size_t level = dep - j;
 			const EncryptionParameters& params = context_.param(level);
 
-			if (j == 0)
-			{
-				create_relin_key_internal(sk_.data(level, 3), sk_.data(level, 2), context_, params, rk);
-			}
-			else
-			{
-				rk.reset(rk.row_size(), rk.col_size(), d - 1, params.q());
-			}
+			// 비밀키는 하나지만 레벨에 따라 q가 달라지므로, rk의 PowerOf2 크기가 달라진다.
+			// 따라서 단순하게 레벨에 따라 q스케일리만 하면 안되고, PowerOf2 크기를 조정해줘야 한다.
+			create_relin_key_internal(sk_.data(level, 3), sk_.data(level, 2), context_, params, rk);
 
 			destination.data(level, rk);
-		}
-	}
-
-	void KeyGenerator::create_relin_key_internal(const PolyMatrix& secret_key1, const PolyMatrix& secret_key2, const Context& context, const EncryptionParameters& params, PolyMatrix& destination) const
-	{
-		const uint64_t d = context.poly_modulus_degree();
-		const uint64_t q = params.q();
-		const uint64_t log_q = static_cast<uint64_t>(std::ceill(std::log2l(params.q())));
-		const uint64_t N = secret_key1.row_size() * log_q;
-
-		// A: 공개키 데이터. (Nx2 poly matrix)
-		PolyMatrix A;
-		create_public_key_internal(secret_key2, params, N, A);
-
-		// W: 비밀키1의 power of 2. (Nx1 poly matrix)
-		PolyMatrix W;
-		W.assign(N, 1, d - 1, q);
-
-		for (size_t r = 0; r < secret_key1.row_size(); r++)
-		{
-			for (size_t c = 0, pow = 1; c < log_q; c++, pow <<= 1)
-			{
-				W.set((r * log_q) + c, 0, secret_key1.get(r, 0) * pow);
-			}
-		}
-
-		// B: 재선형화 키. (Nx2 poly matrix)
-		destination = A;
-		for (size_t r = 0; r < N; r++)
-		{
-			destination.set(r, 0, destination.get(r, 0) + W.get(r, 0));
 		}
 	}
 
@@ -179,6 +143,37 @@ namespace fheprac
 		{
 			destination.set(r, 0, b.get(r, 0));
 			destination.set(r, 1, -(B.get(r, 0)));
+		}
+	}
+
+	void KeyGenerator::create_relin_key_internal(const PolyMatrix& secret_key1, const PolyMatrix& secret_key2, const Context& context, const EncryptionParameters& params, PolyMatrix& destination) const
+	{
+		const uint64_t d = context.poly_modulus_degree();
+		const uint64_t q = params.q();
+		const uint64_t log_q = static_cast<uint64_t>(std::ceill(std::log2l(params.q())));
+		const uint64_t N = secret_key1.row_size() * log_q;
+
+		// A: 공개키 데이터. (Nx2 poly matrix)
+		PolyMatrix A;
+		create_public_key_internal(secret_key2, params, N, A);
+
+		// W: 비밀키1의 power of 2. (Nx1 poly matrix)
+		PolyMatrix W;
+		W.assign(N, 1, d - 1, q);
+
+		for (size_t r = 0; r < secret_key1.row_size(); r++)
+		{
+			for (size_t c = 0, pow = 1; c < log_q; c++, pow <<= 1)
+			{
+				W.set((r * log_q) + c, 0, secret_key1.get(r, 0) * pow);
+			}
+		}
+
+		// B: 재선형화 키. (Nx2 poly matrix)
+		destination = A;
+		for (size_t r = 0; r < N; r++)
+		{
+			destination.set(r, 0, destination.get(r, 0) + W.get(r, 0));
 		}
 	}
 }

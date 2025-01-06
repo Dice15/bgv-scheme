@@ -9,7 +9,7 @@ namespace fheprac
 
 	void Encoder::encode(const std::vector<int64_t>& message, Plaintext& destination) const
 	{
-		const uint64_t d = context_.poly_modulus_degree();
+		const uint64_t d = std::min(context_.poly_modulus_degree(), message.size());
 		const uint64_t p = context_.plain_modulus_value();
 		const uint64_t p_h = p >> 1;
 
@@ -23,6 +23,7 @@ namespace fheprac
 
 			if (value > p_h)
 			{
+				std::cout << value << ' ' << p_h << '\n';
 				throw std::out_of_range("Value out of range.");
 			}
 

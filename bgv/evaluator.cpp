@@ -16,7 +16,7 @@ namespace fheprac
 
         if (curr_params.l() <= next_params.l())
         {
-            throw std::out_of_range("Modulus switching cannot proceed further.");
+            throw std::invalid_argument("Modulus switching cannot proceed further.");
         }
 
         const uint64_t d = context_.poly_modulus_degree();
@@ -48,11 +48,11 @@ namespace fheprac
         destination.params(next_params);
     }
 
-    void Evaluator::relinearize(const Ciphertext& ciphertext, RelinKeys& relinKeys, Ciphertext& destination) const
+    void Evaluator::relinearize(const Ciphertext& ciphertext, const RelinKeys& relinKeys, Ciphertext& destination) const
     {
         if (ciphertext.size() != static_cast<size_t>(3))
         {
-            throw std::out_of_range(".");    // 오직 크기가 3인 암호문만 재선형화가 가능합니다.
+            throw std::invalid_argument(".");    // 오직 크기가 3인 암호문만 재선형화가 가능합니다.
         }
 
         const EncryptionParameters& params = ciphertext.params();
@@ -92,73 +92,157 @@ namespace fheprac
     {
         if (ciphertext1.params().l() != ciphertext2.params().l())
         {
-            throw std::out_of_range("ciphertext1 and ciphertext2 parameter mismatch.");
+            throw std::invalid_argument("ciphertext1 and ciphertext2 parameter mismatch.");
         }
 
         if (ciphertext1.size() != ciphertext2.size())
         {
-            throw std::out_of_range("ciphertext1 and ciphertext2 size mismatch.");
+            throw std::invalid_argument("ciphertext1 and ciphertext2 size mismatch.");
         }
 
-        destination.data(ciphertext1.data() + ciphertext2.data());
-        destination.params(ciphertext1.params());
+        const EncryptionParameters& params = ciphertext1.params();
+        const PolyMatrix& ct1 = ciphertext1.data();
+        const PolyMatrix& ct2 = ciphertext2.data();
+
+        destination.data(ct1 + ct2);
+        destination.params(params);
+    }
+
+    void Evaluator::add(const Ciphertext& ciphertext, const Plaintext& plaintext, Ciphertext& destination) const
+    {
+        if (ciphertext.size() < static_cast<size_t>(2))
+        {
+            throw std::invalid_argument("ciphertext's size must be at least 2.");
+        }
+
+        const EncryptionParameters& params = ciphertext.params();
+        const PolyMatrix& ct = ciphertext.data();
+        PolyMatrix pt = plaintext.data();
+
+        pt.reset(ct.row_size(), ct.col_size(), ct.degree(), ct.modulus());
+
+        destination.data(ct + pt);
+        destination.params(params);
+    }
+
+    void Evaluator::add(const Plaintext& plaintext1, const Plaintext& plaintext2, Plaintext& destination) const
+    {
+        const PolyMatrix& pt1 = plaintext1.data();
+        const PolyMatrix& pt2 = plaintext2.data();
+
+        destination.data(pt1 + pt2);
     }
 
     void Evaluator::sub(const Ciphertext& ciphertext1, const Ciphertext& ciphertext2, Ciphertext& destination) const
     {
         if (ciphertext1.params().l() != ciphertext2.params().l())
         {
-            throw std::out_of_range("ciphertext1 and ciphertext2 parameter mismatch.");
+            throw std::invalid_argument("ciphertext1 and ciphertext2 parameter mismatch.");
         }
 
         if (ciphertext1.size() != ciphertext2.size())
         {
-            throw std::out_of_range("ciphertext1 and ciphertext2 size mismatch.");
+            throw std::invalid_argument("ciphertext1 and ciphertext2 size mismatch.");
         }
 
-        destination.data(ciphertext1.data() - ciphertext2.data());
-        destination.params(ciphertext1.params());
+        const EncryptionParameters& params = ciphertext1.params();
+        const PolyMatrix& ct1 = ciphertext1.data();
+        const PolyMatrix& ct2 = ciphertext2.data();
+
+        destination.data(ct1 - ct2);
+        destination.params(params);
+    }
+
+    void Evaluator::sub(const Ciphertext& ciphertext, const Plaintext& plaintext, Ciphertext& destination) const
+    {
+        if (ciphertext.size() < static_cast<size_t>(2))
+        {
+            throw std::invalid_argument("ciphertext's size must be at least 2.");
+        }
+
+        const EncryptionParameters& params = ciphertext.params();
+        const PolyMatrix& ct = ciphertext.data();
+        PolyMatrix pt = plaintext.data();
+
+        pt.reset(ct.row_size(), ct.col_size(), ct.degree(), ct.modulus());
+
+        destination.data(ct - pt);
+        destination.params(params);
+    }
+
+    void Evaluator::sub(const Plaintext& plaintext1, const Plaintext& plaintext2, Plaintext& destination) const
+    {
+        const PolyMatrix& pt1 = plaintext1.data();
+        const PolyMatrix& pt2 = plaintext2.data();
+
+        destination.data(pt1 - pt2);
     }
 
     void Evaluator::multiply(const Ciphertext& ciphertext1, const Ciphertext& ciphertext2, Ciphertext& destination) const
     {
         if (ciphertext1.params().l() != ciphertext2.params().l())
         {
-            throw std::out_of_range("ciphertext1 and ciphertext2 parameter mismatch.");
+            throw std::invalid_argument("ciphertext1 and ciphertext2 parameter mismatch.");
         }
 
         if (ciphertext1.size() != ciphertext2.size())
         {
-            throw std::out_of_range("ciphertext1 and ciphertext2 size mismatch.");
+            throw std::invalid_argument("ciphertext1 and ciphertext2 size mismatch.");
         }
 
         if (ciphertext1.size() != static_cast<size_t>(2))
         {
-            throw std::out_of_range("Only ciphertexts of size 2 can be multiplied.");
+            throw std::invalid_argument("Only ciphertexts of size 2 can be multiplied.");
         }
 
         const EncryptionParameters& params = ciphertext1.params();
-        const uint64_t d = context_.poly_modulus_degree();
-        const uint64_t q = params.q();
+        const PolyMatrix& ct1 = ciphertext1.data();
+        const PolyMatrix& ct2 = ciphertext2.data();
 
-        PolyMatrix ct(ciphertext1.size() + 1, 1, d - 1, q);
-        const Polynomial& c0 = ciphertext1.data().get(0, 0);
-        const Polynomial& c1 = ciphertext1.data().get(1, 0);
-        const Polynomial& k0 = ciphertext2.data().get(0, 0);
-        const Polynomial& k1 = ciphertext2.data().get(1, 0);
+        const Polynomial& c0 = ct1.get(0, 0);
+        const Polynomial& c1 = ct1.get(1, 0);
+        const Polynomial& k0 = ct2.get(0, 0);
+        const Polynomial& k1 = ct2.get(1, 0);
+
+        PolyMatrix ct(ct1.row_size() + 1, ct1.col_size(), ct1.degree(), ct1.modulus());
 
         ct.set(0, 0, c0 * k0);
         ct.set(1, 0, (c0 * k1) + (c1 * k0));
         ct.set(2, 0, c1 * k1);
 
         destination.data(ct);
-        destination.params(ciphertext1.params());
+        destination.params(params);
+    }
+
+    void Evaluator::multiply(const Ciphertext& ciphertext, const Plaintext& plaintext, Ciphertext& destination) const
+    {
+        if (ciphertext.size() < static_cast<size_t>(2))
+        {
+            throw std::invalid_argument("Only ciphertexts of size 2 can be multiplied.");
+        }
+
+        const EncryptionParameters& params = ciphertext.params();
+        const PolyMatrix& ct = ciphertext.data();
+        PolyMatrix pt = plaintext.data();
+
+        pt.reset(pt.row_size(), ct.col_size(), ct.degree(), ct.modulus());
+
+        destination.data(ct * pt);
+        destination.params(params);
+    }
+
+    void Evaluator::multiply(const Plaintext& plaintext1, const Plaintext& plaintext2, Plaintext& destination) const
+    {
+        const PolyMatrix& pt1 = plaintext1.data();
+        const PolyMatrix& pt2 = plaintext2.data();
+
+        destination.data(pt1 * pt2);
     }
 
     uint64_t Evaluator::drop_to_next_q(uint64_t value, const uint64_t curr_q, const uint64_t next_q, const uint64_t p) const
     {
-        const uint64_t curr_q_h = curr_q >> 1;
-        const uint64_t p_h = p >> 1;
+        const uint64_t curr_q_h = curr_q >> static_cast<uint64_t>(1);
+        const uint64_t p_h = p >> static_cast<uint64_t>(1);
 
         bool sign = false;
         uint64_t val = value;

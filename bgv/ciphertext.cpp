@@ -10,13 +10,13 @@ namespace fheprac
 
 	void Ciphertext::assign(const size_t size, const Context& context, const EncryptionParameters& params)
 	{
-		ct_.assign(size, 1, context.poly_modulus_degree(), params.q());
+		ct_.assign(size, 1, context.poly_modulus_degree() - static_cast<uint64_t>(1), params.q());
 		params_ = params;
 	}
 
 	void Ciphertext::reset(const size_t size, const Context& context, const EncryptionParameters& params)
 	{
-		ct_.assign(size, 1, context.poly_modulus_degree(), params.q());
+		ct_.assign(size, 1, context.poly_modulus_degree() - static_cast<uint64_t>(1), params.q());
 		params_ = params;
 	}
 

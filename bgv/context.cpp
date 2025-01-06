@@ -7,6 +7,11 @@ namespace fheprac
 {
     Context::Context(uint64_t poly_modulus_degree, uint64_t plain_modulus_bit_size, uint64_t depth)
     {
+        if (poly_modulus_degree == 0 || (poly_modulus_degree & (poly_modulus_degree - 1)) != 0) 
+        {
+            throw std::invalid_argument("poly_modulus_degree must be a power of 2");
+        }
+
         deg_ = poly_modulus_degree;
 
         plain_mod_ = get_p(poly_modulus_degree, plain_modulus_bit_size);
@@ -37,6 +42,11 @@ namespace fheprac
     uint64_t Context::depth() const
     {
         return dep_;
+    }
+
+    uint64_t Context::slot_count() const
+    {
+        return deg_;
     }
 
     EncryptionParameters Context::first_param() const

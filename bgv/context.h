@@ -16,6 +16,8 @@ namespace fheprac
 
 		uint64_t depth() const;
 
+		uint64_t slot_count() const;
+
 		EncryptionParameters first_param() const;
 
 		EncryptionParameters last_param() const;

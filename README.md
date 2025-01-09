@@ -1,8 +1,14 @@
 # bgv-scheme
  Leveled Fully Homomorphic Encryption without Bootstrapping
-
-
+ 
 # test
+
+임시 사진 (이후에 삭제할 예정)
+
+![image](https://github.com/user-attachments/assets/7671abcc-a347-4ec4-878c-2e44fce77e3e)
+
+![image](https://github.com/user-attachments/assets/8c93550b-551b-4bd8-890b-97aa4de5aaa6)
+
 ### Context
 
 - poly modulus degree: 4

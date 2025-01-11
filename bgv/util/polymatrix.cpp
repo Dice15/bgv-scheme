@@ -4,10 +4,10 @@
 
 namespace fheprac
 {
-    PolyMatrix::PolyMatrix() : row_size_(0), col_size_(0), deg_(0), mod_(0) {}
+    PolyMatrix::PolyMatrix() : row_size_(0), col_size_(0), poly_modulus_degree_(0), modulus_(0) {}
 
-    PolyMatrix::PolyMatrix(const size_t row_size, const size_t col_size, const uint64_t degree, const uint64_t modulus, const uint64_t value)
-        : row_size_(row_size), col_size_(col_size), deg_(degree), mod_(modulus)
+    PolyMatrix::PolyMatrix(const size_t row_size, const size_t col_size, const uint64_t poly_modulus_degree, const uint64_t modulus, const uint64_t value)
+        : row_size_(row_size), col_size_(col_size), poly_modulus_degree_(poly_modulus_degree), modulus_(modulus)
     {
         elems_.assign(row_size_, std::vector<Polynomial>(col_size_));
 
@@ -15,7 +15,7 @@ namespace fheprac
         {
             for (size_t c = 0; c < col_size_; c++)
             {
-                elems_[r][c].assign(deg_, mod_, value);
+                elems_[r][c].assign(poly_modulus_degree_, modulus_, value);
             }
         }
     }
@@ -52,7 +52,7 @@ namespace fheprac
 
     void PolyMatrix::set(const size_t row, const size_t col, const Polynomial& poly)
     {
-        for (size_t i = 0; i <= poly.degree(); i++)
+        for (size_t i = 0; i < poly.poly_modulus_degree(); i++)
         {
             set(row, col, i, poly.get(i));
         }
@@ -68,39 +68,39 @@ namespace fheprac
         return col_size_;
     }
 
-    uint64_t PolyMatrix::degree() const
+    uint64_t PolyMatrix::poly_modulus_degree() const
     {
-        return deg_;
+        return poly_modulus_degree_;
     }
 
     uint64_t PolyMatrix::modulus() const
     {
-        return mod_;
+        return modulus_;
     }
 
-    void PolyMatrix::assign(const size_t row_size, const size_t col_size, const uint64_t degree, const uint64_t modulus, const uint64_t value)
+    void PolyMatrix::assign(const size_t row_size, const size_t col_size, const uint64_t poly_modulus_degree, const uint64_t modulus, const uint64_t value)
     {
         row_size_ = row_size;
         col_size_ = col_size;
-        deg_ = degree;
-        mod_ = modulus;
+        poly_modulus_degree_ = poly_modulus_degree;
+        modulus_ = modulus;
         elems_.assign(row_size_, std::vector<Polynomial>(col_size_));
 
         for (size_t r = 0; r < row_size_; r++)
         {
             for (size_t c = 0; c < col_size_; c++)
             {
-                elems_[r][c].assign(deg_, mod_, value);
+                elems_[r][c].assign(poly_modulus_degree_, modulus_, value);
             }
         }
     }
 
-    void PolyMatrix::reset(const size_t row_size, const size_t col_size, const uint64_t degree, const uint64_t modulus, const uint64_t value)
+    void PolyMatrix::reset(const size_t row_size, const size_t col_size, const uint64_t poly_modulus_degree, const uint64_t modulus, const uint64_t value)
     {
         row_size_ = row_size;
         col_size_ = col_size;
-        deg_ = degree;
-        mod_ = modulus;
+        poly_modulus_degree_ = poly_modulus_degree;
+        modulus_ = modulus;
         elems_.resize(row_size_);
 
         for (size_t r = 0; r < row_size_; r++)
@@ -109,14 +109,14 @@ namespace fheprac
 
             for (size_t c = 0; c < col_size_; c++)
             {
-                elems_[r][c].reset(deg_, mod_, value);
+                elems_[r][c].reset(poly_modulus_degree_, modulus_, value);
             }
         }
     }
 
     PolyMatrix PolyMatrix::t() const
     {
-        PolyMatrix destination(col_size_, row_size_, deg_, mod_);
+        PolyMatrix destination(col_size_, row_size_, poly_modulus_degree_, modulus_);
 
         for (uint64_t r = 0; r < row_size_; r++)
         {
@@ -131,12 +131,12 @@ namespace fheprac
 
     PolyMatrix PolyMatrix::operator+(const PolyMatrix& other) const
     {
-        if (row_size_ != other.row_size_ || col_size_ != other.col_size_ || deg_ != other.deg_ || mod_ != other.mod_)
+        if (row_size_ != other.row_size_ || col_size_ != other.col_size_ || poly_modulus_degree_ != other.poly_modulus_degree_ || modulus_ != other.modulus_)
         {
             throw std::invalid_argument("PolyMatrixs must have matching dimension, degree and modulus.");
         }
 
-        PolyMatrix destination(row_size_, col_size_, deg_, mod_);
+        PolyMatrix destination(row_size_, col_size_, poly_modulus_degree_, modulus_);
 
         for (uint64_t r = 0; r < row_size_; r++)
         {
@@ -151,7 +151,7 @@ namespace fheprac
 
     void PolyMatrix::operator+=(const PolyMatrix& other)
     {
-        if (row_size_ != other.row_size_ || col_size_ != other.col_size_ || deg_ != other.deg_ || mod_ != other.mod_)
+        if (row_size_ != other.row_size_ || col_size_ != other.col_size_ || poly_modulus_degree_ != other.poly_modulus_degree_ || modulus_ != other.modulus_)
         {
             throw std::invalid_argument("PolyMatrixs must have matching dimension, degree and modulus.");
         }
@@ -167,12 +167,12 @@ namespace fheprac
 
     PolyMatrix PolyMatrix::operator-(const PolyMatrix& other) const
     {
-        if (row_size_ != other.row_size_ || col_size_ != other.col_size_ || deg_ != other.deg_ || mod_ != other.mod_)
+        if (row_size_ != other.row_size_ || col_size_ != other.col_size_ || poly_modulus_degree_ != other.poly_modulus_degree_ || modulus_ != other.modulus_)
         {
             throw std::invalid_argument("PolyMatrixs must have matching dimension, degree and modulus.");
         }
 
-        PolyMatrix destination(row_size_, col_size_, deg_, mod_);
+        PolyMatrix destination(row_size_, col_size_, poly_modulus_degree_, modulus_);
 
         for (uint64_t r = 0; r < row_size_; r++)
         {
@@ -187,7 +187,7 @@ namespace fheprac
 
     void PolyMatrix::operator-=(const PolyMatrix& other)
     {
-        if (row_size_ != other.row_size_ || col_size_ != other.col_size_ || deg_ != other.deg_ || mod_ != other.mod_)
+        if (row_size_ != other.row_size_ || col_size_ != other.col_size_ || poly_modulus_degree_ != other.poly_modulus_degree_ || modulus_ != other.modulus_)
         {
             throw std::invalid_argument("PolyMatrixs must have matching dimension, degree and modulus.");
         }
@@ -203,7 +203,7 @@ namespace fheprac
 
     PolyMatrix PolyMatrix::operator-() const
     {
-        PolyMatrix destination(row_size_, col_size_, deg_, mod_);
+        PolyMatrix destination(row_size_, col_size_, poly_modulus_degree_, modulus_);
 
         for (uint64_t r = 0; r < row_size_; r++)
         {
@@ -224,12 +224,12 @@ namespace fheprac
             throw std::invalid_argument("PolyMatrixs must have matching dimension.");
         }
 
-        if (deg_ != other.deg_ || mod_ != other.mod_)
+        if (poly_modulus_degree_ != other.poly_modulus_degree_ || modulus_ != other.modulus_)
         {
             throw std::invalid_argument("PolyMatrixs must have matching degree and modulus.");
         }
 
-        PolyMatrix destination(row_size_, other.col_size_, deg_, mod_);
+        PolyMatrix destination(row_size_, other.col_size_, poly_modulus_degree_, modulus_);
 
         for (uint64_t r = 0; r < row_size_; r++)
         {
@@ -247,7 +247,7 @@ namespace fheprac
 
     PolyMatrix PolyMatrix::operator*(const uint64_t& other) const
     {
-        PolyMatrix destination(row_size_, col_size_, deg_, mod_);
+        PolyMatrix destination(row_size_, col_size_, poly_modulus_degree_, modulus_);
 
         for (uint64_t r = 0; r < row_size_; r++)
         {
@@ -262,12 +262,12 @@ namespace fheprac
 
     void PolyMatrix::operator*=(const PolyMatrix& other)
     {
-        if (row_size_ != other.row_size_ || col_size_ != other.col_size_ || deg_ != other.deg_ || mod_ != other.mod_)
+        if (row_size_ != other.row_size_ || col_size_ != other.col_size_ || poly_modulus_degree_ != other.poly_modulus_degree_ || modulus_ != other.modulus_)
         {
             throw std::invalid_argument("PolyMatrixs must have matching dimension, degree and modulus.");
         }
 
-        PolyMatrix destination(row_size_, other.col_size_, deg_, mod_);
+        PolyMatrix destination(row_size_, other.col_size_, poly_modulus_degree_, modulus_);
 
         for (uint64_t r = 0; r < row_size_; r++)
         {
@@ -280,7 +280,7 @@ namespace fheprac
             }
         }
 
-        assign(row_size_, other.col_size_, deg_, mod_);
+        assign(row_size_, other.col_size_, poly_modulus_degree_, modulus_);
 
         for (uint64_t r = 0; r < row_size_; r++)
         {

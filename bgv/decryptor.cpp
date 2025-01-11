@@ -1,6 +1,4 @@
 #include "decryptor.h"
-#include <vector>
-#include <iostream>
 
 namespace fheprac
 {
@@ -10,7 +8,6 @@ namespace fheprac
 	{
 		const EncryptionParameters& params = ciphertext.params();
 
-		const uint64_t d = context_.poly_modulus_degree();
 		const uint64_t p = context_.plain_modulus_value();
 		const uint64_t l = params.l();
 		const uint64_t q = params.q();

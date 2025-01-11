@@ -8,7 +8,7 @@ namespace fheprac
 	class Context
 	{
 	public:
-		Context(uint64_t poly_modulus_degree, uint64_t plain_modulus_bit_size, uint64_t depth);
+		Context(const uint64_t poly_modulus_degree, const uint64_t plain_modulus_bit_size, const uint64_t depth);
 
 		uint64_t poly_modulus_degree() const;
 
@@ -22,24 +22,20 @@ namespace fheprac
 
 		EncryptionParameters last_param() const;
 
-		EncryptionParameters param(uint64_t index) const;
+		EncryptionParameters param(const uint64_t index) const;
 
 	private:
-		uint64_t get_p(const uint64_t factor, const int bit_size) const;
+		uint64_t get_p(const uint64_t factor, const uint64_t bit_size) const;
 
-		uint64_t get_q(uint64_t min_val, uint64_t rp_factor) const;
+		uint64_t get_q(const uint64_t factor, const uint64_t lower_bound) const;
 
 		std::vector<uint64_t> create_modulus_chain() const;
 
-		uint64_t deg_;         // modulus degree
+		uint64_t poly_modulus_degree_;
 
-		uint64_t plain_mod_;   // plain modulus
+		uint64_t plain_modulus_;
 
-		uint64_t dep_;         // depth
-
-		uint64_t n_;           // matrix dimension
-
-		uint64_t N_;
+		uint64_t depth_;
 
 		std::vector<EncryptionParameters> params_;
 	};

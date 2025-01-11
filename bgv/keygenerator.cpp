@@ -2,8 +2,7 @@
 #include "util/distribution.h"
 #include "util/polynomial.h"
 #include "util/polymatrix.h"
-#include <vector>
-#include <iostream>
+#include <cmath>
 
 namespace fheprac
 {
@@ -27,7 +26,7 @@ namespace fheprac
 			}
 			else
 			{
-				sk.reset(sk.row_size(), sk.col_size(), d - 1, params.q());
+				sk.reset(sk.row_size(), sk.col_size(), d, params.q());
 			}
 
 			sk_.data(level, sk);
@@ -59,7 +58,7 @@ namespace fheprac
 			}
 			else
 			{
-				pk.reset(pk.row_size(), pk.col_size(), d - 1, params.q());
+				pk.reset(pk.row_size(), pk.col_size(), d, params.q());
 			}
 
 			destination.data(level, pk);
@@ -69,7 +68,6 @@ namespace fheprac
 	void KeyGenerator::create_relin_keys(RelinKeys& destination) const
 	{
 		const uint64_t dep = context_.depth();
-		const uint64_t d = context_.poly_modulus_degree();
 
 		PolyMatrix rk;
 		destination.assign(dep + 1);
@@ -94,7 +92,7 @@ namespace fheprac
 		const uint64_t q = params.q();
 
 		// sk: 비밀키 데이터. (2x1 poly matrix)
-		destination.assign(2, 1, d - 1, q);
+		destination.assign(2, 1, d, q);
 
 		// sk_0: 상수 다항식. (d-1 polynomial)
 		// sk_0 = 1 + 0*x + ... + 0*x^(d-1)
@@ -113,15 +111,15 @@ namespace fheprac
 		const uint64_t q = params.q();
 
 		// pk: 공개키 데이터. (Nx2 poly matrix)
-		destination.assign(N, 2, d - 1, q);
+		destination.assign(N, 2, d, q);
 
 		// t: sk[1][0]로 설정. (1x1 poly matrix)
-		PolyMatrix t(1, 1, d - 1, q);
+		PolyMatrix t(1, 1, d, q);
 		t.set(0, 0, secret_key.get(1, 0));
 
 		// B: Zq 균등 분포에서 뽑은 다항식 행렬. (Nx1 poly matrix)
 		// B[r][c] = Z_0 + Z_1*x + ... + Z_(d-1)*x^(d-1)
-		PolyMatrix B(N, 1, d - 1, q);
+		PolyMatrix B(N, 1, d, q);
 		for (uint64_t r = 0; r < N; r++)
 		{
 			B.set(r, 0, sample_poly_from_uniform_dist(context_, params));
@@ -129,7 +127,7 @@ namespace fheprac
 
 		// e: 가우시안 분포에서 뽑은 다항식 행렬. (Nx1 poly matrix)
 		// e[r][c] = X_0 + X_1*x + ... + X_(d-1)*x^(d-1)
-		PolyMatrix e(N, 1, d - 1, q);
+		PolyMatrix e(N, 1, d, q);
 		for (uint64_t r = 0; r < N; r++)
 		{
 			e.set(r, 0, sample_poly_from_gaussian_dist(context_, params));
@@ -159,7 +157,7 @@ namespace fheprac
 
 		// W: 비밀키1의 power of 2. (Nx1 poly matrix)
 		PolyMatrix W;
-		W.assign(N, 1, d - 1, q);
+		W.assign(N, 1, d, q);
 
 		for (size_t r = 0; r < secret_key1.row_size(); r++)
 		{

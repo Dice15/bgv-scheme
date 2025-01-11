@@ -10,12 +10,12 @@ namespace fheprac
 
 	void Plaintext::assign(const Context& context)
 	{
-		pt_.assign(1, 1, context.poly_modulus_degree() - static_cast<uint64_t>(1), context.plain_modulus_value());
+		pt_.assign(1, 1, context.poly_modulus_degree(), context.plain_modulus_value());
 	}
 
 	void Plaintext::reset(const Context& context)
 	{
-		pt_.reset(1, 1, context.poly_modulus_degree() - static_cast<uint64_t>(1), context.plain_modulus_value());
+		pt_.reset(1, 1, context.poly_modulus_degree(), context.plain_modulus_value());
 	}
 
 	size_t Plaintext::size() const
@@ -30,7 +30,7 @@ namespace fheprac
 
 	uint64_t Plaintext::data(const size_t index) const
 	{
-		if (index > pt_.degree())
+		if (index >= pt_.poly_modulus_degree())
 		{
 			throw std::out_of_range("Index is out of range.");
 		}
@@ -55,7 +55,7 @@ namespace fheprac
 
 	void Plaintext::data(const size_t index, const uint64_t value)
 	{
-		if (index > pt_.degree())
+		if (index >= pt_.poly_modulus_degree())
 		{
 			throw std::out_of_range("Index is out of range.");
 		}

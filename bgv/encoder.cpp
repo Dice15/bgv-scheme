@@ -1,7 +1,6 @@
 #include "encoder.h"
 #include "util/polymatrix.h"
 #include <stdexcept>
-#include <iostream>
 
 namespace fheprac
 {
@@ -23,7 +22,6 @@ namespace fheprac
 
 			if (value > p_h)
 			{
-				std::cout << value << ' ' << p_h << '\n';
 				throw std::out_of_range("Value out of range.");
 			}
 
@@ -44,8 +42,8 @@ namespace fheprac
 		const uint64_t p = context_.plain_modulus_value();
 		const uint64_t h_p = p >> 1;
 
-		// v: บคลอ. (d-vetor)
-		// v = (pt_0 + pt_1*x + ... + pt_(d-1)*x) mod p
+		// v: บคลอ. (d-vector)
+		// v = (pt_0 + pt_1*x + ... + pt_(d-1)*x mod p
 		destination.assign(slot_count, 0);
 
 		for (size_t i = 0; i < slot_count; i++)

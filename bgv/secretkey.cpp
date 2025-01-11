@@ -54,7 +54,7 @@ namespace fheprac
 		const Polynomial& sk_0 = poly_matrix.get(0, 0);
 		const Polynomial& sk_1 = poly_matrix.get(1, 0);
 
-		destination.assign(3, 1, poly_matrix.degree(), poly_matrix.modulus());
+		destination.assign(3, 1, poly_matrix.poly_modulus_degree(), poly_matrix.modulus());
 		destination.set(0, 0, sk_0);
 		destination.set(1, 0, sk_1);
 		destination.set(2, 0, sk_1 * sk_1);

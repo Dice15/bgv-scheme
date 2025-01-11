@@ -10,13 +10,13 @@ namespace fheprac
 
 	void Ciphertext::assign(const size_t size, const Context& context, const EncryptionParameters& params)
 	{
-		ct_.assign(size, 1, context.poly_modulus_degree() - static_cast<uint64_t>(1), params.q());
+		ct_.assign(size, 1, context.poly_modulus_degree(), params.q());
 		params_ = params;
 	}
 
 	void Ciphertext::reset(const size_t size, const Context& context, const EncryptionParameters& params)
 	{
-		ct_.assign(size, 1, context.poly_modulus_degree() - static_cast<uint64_t>(1), params.q());
+		ct_.assign(size, 1, context.poly_modulus_degree(), params.q());
 		params_ = params;
 	}
 
@@ -37,7 +37,7 @@ namespace fheprac
 			throw std::out_of_range("Dimension is out of range.");
 		}
 
-		if (index > ct_.degree())
+		if (index >= ct_.poly_modulus_degree())
 		{
 			throw std::out_of_range("Index is out of range.");
 		}
@@ -68,7 +68,7 @@ namespace fheprac
 			throw std::out_of_range("Dimension is out of range.");
 		}
 
-		if (index > ct_.degree())
+		if (index >= ct_.poly_modulus_degree())
 		{
 			throw std::out_of_range("Index is out of range.");
 		}

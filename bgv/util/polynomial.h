@@ -10,7 +10,7 @@ namespace fheprac
 	public:
 		Polynomial();
 
-		Polynomial(const uint64_t degree, const uint64_t modulus, const uint64_t value = 0);
+		Polynomial(const uint64_t poly_modulus_degree, const uint64_t modulus, const uint64_t value = 0);
 
 		uint64_t get(const size_t index) const;
 
@@ -20,13 +20,13 @@ namespace fheprac
 
 		void set(const std::vector<uint64_t>& coeffients);
 
-		uint64_t degree() const;
+		uint64_t poly_modulus_degree() const;
 
 		uint64_t modulus() const;
 
-		void assign(const uint64_t degree, const uint64_t modulus, const uint64_t value = 0);
+		void assign(const uint64_t poly_modulus_degree, const uint64_t modulus, const uint64_t value = 0);
 
-		void reset(const uint64_t degree, const uint64_t modulus, const uint64_t value = 0);
+		void reset(const uint64_t poly_modulus_degree, const uint64_t modulus, const uint64_t value = 0);
 
 		Polynomial operator+(const Polynomial& other) const;
 
@@ -49,8 +49,8 @@ namespace fheprac
 	private:
 		std::vector<uint64_t> coeffs_;
 
-		uint64_t deg_;
+		uint64_t poly_modulus_degree_;
 
-		uint64_t mod_;
+		uint64_t modulus_;
 	};
 }

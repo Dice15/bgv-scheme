@@ -1,52 +1,47 @@
 #include "context.h"
 #include <seal/seal.h>
 #include <stdexcept>
-#include <iostream>
 
 namespace fheprac
 {
-    Context::Context(uint64_t poly_modulus_degree, uint64_t plain_modulus_bit_size, uint64_t depth)
+    Context::Context(const uint64_t poly_modulus_degree, const uint64_t plain_modulus_bit_size, const uint64_t depth)
     {
         if (poly_modulus_degree == 0 || (poly_modulus_degree & (poly_modulus_degree - 1)) != 0) 
         {
             throw std::invalid_argument("poly_modulus_degree must be a power of 2");
         }
 
-        deg_ = poly_modulus_degree;
+        poly_modulus_degree_ = poly_modulus_degree;
 
-        plain_mod_ = get_p(poly_modulus_degree, plain_modulus_bit_size);
+        plain_modulus_ = get_p(poly_modulus_degree, plain_modulus_bit_size);
 
-        dep_ = depth;
-
-        n_ = 1;
-
-        N_ = 1;
+        depth_ = depth;
 
         // 모듈러스 체인을 기반으로 파라미터 생성.
         for (const auto& q : create_modulus_chain())
         {
-            params_.push_back(EncryptionParameters(q, params_.size(), (params_.size() + dep_ - 1) % dep_));
+            params_.push_back(EncryptionParameters(q, params_.size(), (params_.size() + depth_ - 1) % depth_));
         }
     }
 
     uint64_t Context::poly_modulus_degree() const
     {
-        return deg_;
+        return poly_modulus_degree_;
     }
 
     uint64_t Context::plain_modulus_value() const
     {
-        return plain_mod_;
+        return plain_modulus_;
     }
 
     uint64_t Context::depth() const
     {
-        return dep_;
+        return depth_;
     }
 
     uint64_t Context::slot_count() const
     {
-        return deg_;
+        return poly_modulus_degree_;
     }
 
     EncryptionParameters Context::first_param() const
@@ -59,21 +54,21 @@ namespace fheprac
         return params_.front();
     }
 
-    EncryptionParameters Context::param(uint64_t index) const
+    EncryptionParameters Context::param(const uint64_t index) const
     {
         return params_[index];
     }
 
-    uint64_t Context::get_p(const uint64_t factor, const int bit_size) const
+    uint64_t Context::get_p(const uint64_t factor, const uint64_t bit_size) const
     {
-        // Start with (2^bit_size - 1) / factor * factor + 1
-        uint64_t value = ((uint64_t(0x1) << bit_size) - 1) / factor * factor + 1;
-        uint64_t lower_bound = uint64_t(0x1) << (bit_size - 1);
+        // (2^bit_size - 1) / factor * factor + 1 부터 factor를 빼면서 소수를 찾음.
+        uint64_t candidate = ((static_cast<uint64_t>(1) << bit_size) - 1) / factor * factor + 1;
+        uint64_t lower_bound = static_cast<uint64_t>(1) << (bit_size - 1);
         bool found = false;
 
-        while (value > lower_bound)
+        while (candidate > lower_bound)
         {
-            seal::Modulus new_mod(value);
+            seal::Modulus new_mod(candidate);
 
             if (new_mod.is_prime())
             {
@@ -81,7 +76,7 @@ namespace fheprac
                 break;
             }
 
-            value += factor;
+            candidate -= factor;
         }
 
         if (found == false)
@@ -89,16 +84,32 @@ namespace fheprac
             throw std::logic_error("failed to find enough qualifying primes");
         }
 
-        return value;
+        return candidate;
     }
 
     uint64_t Context::get_q(const uint64_t factor, const uint64_t lower_bound) const
     {
+        // (2^bit_size - 1) / factor * factor + 1 부터 factor를 더하면서 소수를 찾음.
         uint64_t candidate = ((lower_bound + factor) / factor) * factor + 1;
+        uint64_t upper_bound = static_cast<uint64_t>(1) << (64 - 1);
+        bool found = false;
 
-        if (!(candidate % 2))
+        while (candidate < upper_bound)
         {
+            seal::Modulus new_mod(candidate);
+
+            if (new_mod.is_prime())
+            {
+                found = true;
+                break;
+            }
+
             candidate += factor;
+        }
+
+        if (found == false)
+        {
+            throw std::logic_error("failed to find enough qualifying primes");
         }
 
         return candidate;
@@ -106,9 +117,9 @@ namespace fheprac
 
     std::vector<uint64_t> Context::create_modulus_chain() const
     {
-        uint64_t dep = dep_;
-        uint64_t p = plain_mod_;
-        uint64_t d = deg_;
+        uint64_t dep = depth_;
+        uint64_t p = plain_modulus_;
+        uint64_t d = poly_modulus_degree_;
 
         // 최대 누적 오차 (X는 표준편자가 3.2인 가우시안 분포에서 뽑은 값이다. 따라서 X는 10으로 계산한다.)
         // 연산 하지 않은 경우: 약 p * (X^2*d + X^2*d + X) + m
@@ -131,26 +142,18 @@ namespace fheprac
         // 다음 조건을 만족하는 q를 (dep + 1)개 찾는다.
         // 1) q[i+1] > q[i] > p
         // 2) q[i+1] = q[i] = 1 mod p
-        // 3) q는 홀수
+        // 3) q는 소수(or 홀수)
         // 4) q와 p는 서로소
-        // 수식 k * p + 1으로 조건 2와 4를 항상 만족하는 값을 구할 수 있으며, k를 항상 짝수로 설정하면 조건 3또한 항상 만족시킬 수 있다.
+        // 수식 k * p + 1으로 조건 2와 4를 항상 만족하는 값을 구할 수 있다.
+        // 또한 k값을 수정해 나가면서 소수인지 판별하면 소수 조건도 만족 시킬 수 있다.
         std::vector<uint64_t> q_chain(dep + 1);
-        uint64_t q0 = get_q(p, q_bound);
-        uint64_t q1 = get_q(p, p);
 
-        q_chain[0] = q0;
+        q_chain[0] = get_q(p, q_bound);
 
         for (uint64_t i = 1; i < q_chain.size(); i++)
         {
-            q_chain[i] = q_chain[i - 1] * q1;
+            q_chain[i] = get_q(p, q_chain[i - 1] * p);
         }
-
-        // TEST
-        std::cout << max_cipher_value_bit << '\n';
-        std::cout << max_cipher_value << '\n';
-        std::cout << q_bound << '\n';
-        std::cout << q0 << '\n';
-        std::cout << q1 << '\n';
 
         return q_chain;
     }

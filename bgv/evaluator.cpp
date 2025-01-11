@@ -2,8 +2,8 @@
 #include "encryptionparams.h"
 #include "util/safeoperation.h"
 #include <stdexcept>
-#include <iostream>
 #include <intrin.h>
+#include <cmath>
 
 namespace fheprac
 {
@@ -26,7 +26,7 @@ namespace fheprac
 
         // ct, ct': 암호문 데이터. (2x1 poly matrix)
         const PolyMatrix& ct = ciphertext.data();
-        PolyMatrix ct_dot(ct.row_size(), ct.col_size(), d - 1, next_q);
+        PolyMatrix ct_dot(ct.row_size(), ct.col_size(), d, next_q);
 
         // curr_q > next_q > p and curr_q = next_q = 1 mod p.
         // [<ct', s>]_next_q = [<ct, s>]_curr_q mod p.
@@ -35,7 +35,7 @@ namespace fheprac
         {
             for (uint64_t col = 0; col < ct_dot.col_size(); col++)
             {
-                for (uint64_t i = 0; i <= ct_dot.degree(); i++)
+                for (uint64_t i = 0; i < ct_dot.poly_modulus_degree(); i++)
                 {
                     const uint64_t coeff_curr = ct.get(row, col, i);
                     const uint64_t coeff_next = drop_to_next_q(coeff_curr, curr_q, next_q, p);
@@ -67,13 +67,13 @@ namespace fheprac
 
         // D: 암호문 비트. (Nx1 poly matrix)
         PolyMatrix D;
-        D.assign(N, 1, d - 1, q);
+        D.assign(N, 1, d, q);
 
         for (size_t r = 0; r < ct.row_size(); r++)
         {
             for (size_t c = 0, bit = 1; c < log_q; c++, bit <<= 1)
             {
-                for (size_t i = 0; i <= ct.degree(); i++)
+                for (size_t i = 0; i < ct.poly_modulus_degree(); i++)
                 {
                     D.set((r * log_q) + c, 0, i, (ct.get(r, 0, i) & bit) ? 1 : 0);
                 }
@@ -119,7 +119,7 @@ namespace fheprac
         const PolyMatrix& ct = ciphertext.data();
         PolyMatrix pt = plaintext.data();
 
-        pt.reset(ct.row_size(), ct.col_size(), ct.degree(), ct.modulus());
+        pt.reset(ct.row_size(), ct.col_size(), ct.poly_modulus_degree(), ct.modulus());
 
         destination.data(ct + pt);
         destination.params(params);
@@ -164,7 +164,7 @@ namespace fheprac
         const PolyMatrix& ct = ciphertext.data();
         PolyMatrix pt = plaintext.data();
 
-        pt.reset(ct.row_size(), ct.col_size(), ct.degree(), ct.modulus());
+        pt.reset(ct.row_size(), ct.col_size(), ct.poly_modulus_degree(), ct.modulus());
 
         destination.data(ct - pt);
         destination.params(params);
@@ -204,7 +204,7 @@ namespace fheprac
         const Polynomial& k0 = ct2.get(0, 0);
         const Polynomial& k1 = ct2.get(1, 0);
 
-        PolyMatrix ct(ct1.row_size() + 1, ct1.col_size(), ct1.degree(), ct1.modulus());
+        PolyMatrix ct(ct1.row_size() + 1, ct1.col_size(), ct1.poly_modulus_degree(), ct1.modulus());
 
         ct.set(0, 0, c0 * k0);
         ct.set(1, 0, (c0 * k1) + (c1 * k0));
@@ -225,7 +225,7 @@ namespace fheprac
         const PolyMatrix& ct = ciphertext.data();
         PolyMatrix pt = plaintext.data();
 
-        pt.reset(pt.row_size(), ct.col_size(), ct.degree(), ct.modulus());
+        pt.reset(pt.row_size(), ct.col_size(), ct.poly_modulus_degree(), ct.modulus());
 
         destination.data(ct * pt);
         destination.params(params);
@@ -244,34 +244,23 @@ namespace fheprac
         const uint64_t curr_q_h = curr_q >> static_cast<uint64_t>(1);
         const uint64_t p_h = p >> static_cast<uint64_t>(1);
 
-        bool sign = false;
-        uint64_t val = value;
+        uint64_t origin = value;
 
-        if (val > curr_q_h)
-        {
-            val = curr_q - val;
-            sign = true;
-        }
-
-        /*
-        * 계산 정확도를 위해 소수점을 사용하지 않고 계산.
-        * scaled = (value * next_q) / curr_q          // value에 q[i] / q[i+1]를 곱하고 소수점 버림.
-        * diif = value - scaled * (curr_q / next_q)   // 손실값 계산.
-        * result = scaled + diff                      // 손실값 복원.
-        */
-        uint64_t scaled, diif, result, high, low, remainder;
-        mul_safe(val, next_q, low, high);
+        // 계산 정확도를 위해 소수점을 사용하지 않고 계산.
+        // scaled = (origin * next_q) / curr_q
+        uint64_t scaled, high, low, remainder;
+        mul_safe(origin, next_q, low, high);
         div_safe(high, low, curr_q, scaled, remainder);
-        diif = val - (scaled * (curr_q / next_q));
-        result = scaled + diif;
+
+        // origin = scaled mod p 조건을 만족하면서 scaled와 가장 가까운 값(closet)을 찾아야 한다.
+        uint64_t origin_mod_p = mod(origin, p);
+        uint64_t scaled_mod_p = mod(scaled, p);
+        uint64_t diff = add_mod_safe(origin_mod_p, negate_mod_safe(scaled_mod_p, p), p);
+        uint64_t correction_factor = diff <= p_h ? diff : add_mod_safe(diff, negate_mod_safe(p, next_q), next_q);
+        uint64_t result = add_mod_safe(scaled, correction_factor, next_q);
         
         // TEST
-        std::cout << val << " -> " << result << " (diff: " << diif << ", scaled: " << scaled << ")" << "\n";
-
-        if (sign)
-        {
-            result = curr_q - result;
-        }
+        //std::cout << origin << " -> " << result << " (correction_factor: " << diff << ", scaled: " << scaled << ", next q: " << next_q << ")" << "\n";
 
         return result;
     }

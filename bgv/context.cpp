@@ -1,5 +1,4 @@
 #include "context.h"
-#include <seal/seal.h>
 #include <stdexcept>
 
 namespace fheprac
@@ -8,7 +7,17 @@ namespace fheprac
     {
         if (poly_modulus_degree == 0 || (poly_modulus_degree & (poly_modulus_degree - 1)) != 0) 
         {
-            throw std::invalid_argument("poly_modulus_degree must be a power of 2");
+            throw std::invalid_argument("The poly modulus degree must be a power of 2");
+        }
+
+        if (plain_modulus_bit_size < 2)
+        {
+            throw std::invalid_argument("The plain modulus bit size must be at least 2.");
+        }
+
+        if (depth < 1)
+        {
+            throw std::invalid_argument("The depth must be at least 1.");
         }
 
         poly_modulus_degree_ = poly_modulus_degree;
@@ -117,20 +126,22 @@ namespace fheprac
 
     std::vector<uint64_t> Context::create_modulus_chain() const
     {
-        uint64_t dep = depth_;
+        uint64_t depth = depth_;
         uint64_t p = plain_modulus_;
         uint64_t d = poly_modulus_degree_;
 
         // 최대 누적 오차 (X는 표준편자가 3.2인 가우시안 분포에서 뽑은 값이다. 따라서 X는 10으로 계산한다.)
         // 연산 하지 않은 경우: 약 p * (X^2*d + X^2*d + X) + m
         // 곱셈 연산을 한 경우: 약 p^2 * (4*X^4*d^3 + 4*X^3*d^2 + 5*X^2*d + 2*X) + m^2
-        // 따라서 p대비 q의 크기를 (p^2 * (4*X^4*d^3 + 4*X^3*d^2 + 5*X^2*d + 2*X) * p^2) 이상으로 잡으면 충분하다.
-        uint64_t max_cipher_value = (p * p) * (
-            + (static_cast<uint64_t>(40000) * d * d * d)
-            + (static_cast<uint64_t>(4000) * d * d)
-            + (static_cast<uint64_t>(500) * d)
-            + 20
-            + 1);
+        // 
+        // Modulus switching의 closest 이동으로 인한 증가 값. (이때, mod switch 횟수를 고려하여 depth - 1를 곱한다.)
+        // (p / 2) * d * (10 * d) * (depth - 1)
+        // 
+        // 따라서 p대비 q의 크기를 (p^2 * (4*X^4*d^3 + 4*X^3*d^2 + 5*X^2*d + 2*X) * p^2) + (p / 2) * d * (10 * d) * (depth - 1) 이상으로 잡으면 충분하다.
+        uint64_t max_cipher_value =
+            ((p * p) * ((static_cast<uint64_t>(40000) * d * d * d) + (static_cast<uint64_t>(4000) * d * d) + (static_cast<uint64_t>(500) * d) + 20 + 1))
+            + ((p >> static_cast <uint64_t>(1)) * d * (10 * d) * depth);
+            
         uint64_t max_cipher_value_bit = static_cast<uint64_t>(std::log2l(max_cipher_value)) + static_cast<uint64_t>(1);
 
         // q가 홀수인 Zq에서 [0, q/2]은 양수, [q/2+1, q-1]은 홀수를 나타낸다.
@@ -139,14 +150,14 @@ namespace fheprac
         // 따라서 |ct.coeff| < q/2의 의미는, 양수는 [0, q/2] 범위 내에, 음수는 [q/2+1, q-1] 범위 내에 항시 존재하게 하기 위해 필요 조건이다.
         uint64_t q_bound = static_cast<uint64_t>(1) << (max_cipher_value_bit + 1);
 
-        // 다음 조건을 만족하는 q를 (dep + 1)개 찾는다.
+        // 다음 조건을 만족하는 q를 (depth + 1)개 찾는다.
         // 1) q[i+1] > q[i] > p
         // 2) q[i+1] = q[i] = 1 mod p
         // 3) q는 소수(or 홀수)
         // 4) q와 p는 서로소
         // 수식 k * p + 1으로 조건 2와 4를 항상 만족하는 값을 구할 수 있다.
         // 또한 k값을 수정해 나가면서 소수인지 판별하면 소수 조건도 만족 시킬 수 있다.
-        std::vector<uint64_t> q_chain(dep + 1);
+        std::vector<uint64_t> q_chain(depth + 1);
 
         q_chain[0] = get_q(p, q_bound);
 

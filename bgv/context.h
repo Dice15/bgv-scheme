@@ -2,6 +2,7 @@
 #include "encryptionparams.h"
 #include <stdint.h>
 #include <vector>
+#include <seal/seal.h>
 
 namespace fheprac
 {

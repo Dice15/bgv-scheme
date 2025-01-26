@@ -31,13 +31,13 @@ namespace fheprac
 		// e: 가우시안 분포에서 뽑은 다항식 행렬. (2x1 poly matrix)
 		// e[r][c] = X_0 + X_1*x + ... + X_(d-1)*x^(d-1)
 		PolyMatrix e(2, 1, d, q);
-		e.set(0, 0, sample_poly_from_gaussian_dist(context_, params));
-		e.set(1, 0, sample_poly_from_gaussian_dist(context_, params));
+		e.set(0, 0, sample_poly_from_gaussian_dist(d, q));
+		e.set(1, 0, sample_poly_from_gaussian_dist(d, q));
 
 		// r: 가우시안 분포에서 뽑은 다항식 행렬. (1x1 poly matrix)
 		// r[r][c] = X_0 + X_1*x + ... + X_(d-1)*x^(d-1)
 		PolyMatrix r(1, 1, d, q);
-		r.set(0, 0, sample_poly_from_gaussian_dist(context_, params));
+		r.set(0, 0, sample_poly_from_gaussian_dist(d, q));
 
 		// pk: 레벨dep에서 정의된 공개키. (1x2 poly matrix)
 		// pk: [[b, -B]]

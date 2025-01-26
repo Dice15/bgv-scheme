@@ -33,6 +33,8 @@ namespace fheprac
 
 		void reset(const size_t row_size, const size_t col_size, const uint64_t poly_modulus_degree, const uint64_t modulus, const uint64_t value = 0);
 
+		void reset_unsafe(const size_t row_size, const size_t col_size, const uint64_t poly_modulus_degree, const uint64_t modulus, const uint64_t value = 0);
+
 		PolyMatrix t() const;
 
 		PolyMatrix operator+(const PolyMatrix& other) const;

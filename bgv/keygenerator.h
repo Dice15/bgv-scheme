@@ -4,6 +4,7 @@
 #include "secretkey.h"
 #include "publickey.h"
 #include "relinkeys.h"
+#include "switchkeys.h"
 
 namespace fheprac
 {
@@ -18,12 +19,16 @@ namespace fheprac
 
 		void create_relin_keys(RelinKeys& destination) const;
 
+		void create_switch_keys(const SecretKey& other, SwitchKeys& destination) const;
+
 	private:
-		void create_secret_key_internal(const EncryptionParameters& params, PolyMatrix& destination) const;
+		void create_secret_key_internal(SecretKey& destination) const;
 
-		void create_public_key_internal(const PolyMatrix& secret_key, const EncryptionParameters& params, const uint64_t N, PolyMatrix& destination) const;
+		void create_public_key_internal(const uint64_t N, PublicKey& destination) const;
 
-		void create_relin_key_internal(const PolyMatrix& secret_key1, const PolyMatrix& secret_key2, const Context& context, const EncryptionParameters& params, PolyMatrix& destination) const;
+		void create_relin_key_internal(RelinKeys& destination) const;
+
+		void create_switch_keys_internal(const SecretKey& other, SwitchKeys& destination) const;
 
 		SecretKey sk_;
 

@@ -137,10 +137,12 @@ namespace fheprac
         // Modulus switching의 closest 이동으로 인한 증가 값. (이때, mod switch 횟수를 고려하여 depth - 1를 곱한다.)
         // (p / 2) * d * (10 * d) * (depth - 1)
         // 
+        // 
         // 따라서 p대비 q의 크기를 (p^2 * (4*X^4*d^3 + 4*X^3*d^2 + 5*X^2*d + 2*X) * p^2) + (p / 2) * d * (10 * d) * (depth - 1) 이상으로 잡으면 충분하다.
         uint64_t max_cipher_value =
             ((p * p) * ((static_cast<uint64_t>(40000) * d * d * d) + (static_cast<uint64_t>(4000) * d * d) + (static_cast<uint64_t>(500) * d) + 20 + 1))
-            + ((p >> static_cast <uint64_t>(1)) * d * (10 * d) * depth);
+            + ((p >> static_cast <uint64_t>(1)) * d * (10 * d) * depth)
+            + (p * 600 * d * d * depth);
             
         uint64_t max_cipher_value_bit = static_cast<uint64_t>(std::log2l(max_cipher_value)) + static_cast<uint64_t>(1);
 

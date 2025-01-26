@@ -114,6 +114,25 @@ namespace fheprac
         }
     }
 
+    void PolyMatrix::reset_unsafe(const size_t row_size, const size_t col_size, const uint64_t poly_modulus_degree, const uint64_t modulus, const uint64_t value)
+    {
+        row_size_ = row_size;
+        col_size_ = col_size;
+        poly_modulus_degree_ = poly_modulus_degree;
+        modulus_ = modulus;
+        elems_.resize(row_size_);
+
+        for (size_t r = 0; r < row_size_; r++)
+        {
+            elems_[r].resize(col_size_);
+
+            for (size_t c = 0; c < col_size_; c++)
+            {
+                elems_[r][c].reset_unsafe(poly_modulus_degree_, modulus_, value);
+            }
+        }
+    }
+
     PolyMatrix PolyMatrix::t() const
     {
         PolyMatrix destination(col_size_, row_size_, poly_modulus_degree_, modulus_);

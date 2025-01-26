@@ -89,6 +89,22 @@ namespace fheprac
 		}
 	}
 
+	void Polynomial::reset_unsafe(const uint64_t poly_modulus_degree, const uint64_t modulus, const uint64_t value)
+	{
+		uint64_t mod_prev = modulus_;
+		uint64_t mod_prev_h = mod_prev >> 1;
+		uint64_t mod_curr = modulus;
+
+		poly_modulus_degree_ = poly_modulus_degree;
+		modulus_ = modulus;
+		coeffs_.resize(poly_modulus_degree_, value);
+
+		for (size_t i = 0; i < poly_modulus_degree_; i++)
+		{
+			coeffs_[i] = mod(coeffs_[i], mod_curr);
+		}
+	}
+
 	Polynomial Polynomial::operator+(const Polynomial& other) const
 	{
 		if (poly_modulus_degree_ != other.poly_modulus_degree_ || modulus_ != other.modulus_)

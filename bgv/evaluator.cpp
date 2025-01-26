@@ -4,6 +4,7 @@
 #include <stdexcept>
 #include <intrin.h>
 #include <cmath>
+#include <iostream>
 
 namespace fheprac
 {
@@ -48,21 +49,61 @@ namespace fheprac
         destination.params(next_params);
     }
 
-    void Evaluator::relinearize(const Ciphertext& ciphertext, const RelinKeys& relinKeys, Ciphertext& destination) const
+    void Evaluator::relinearize(const Ciphertext& ciphertext, const RelinKeys& relinkeys, Ciphertext& destination) const
     {
         if (ciphertext.size() != static_cast<size_t>(3))
         {
             throw std::invalid_argument(".");    // 오직 크기가 3인 암호문만 재선형화가 가능합니다.
         }
 
+        if (context_.poly_modulus_degree() != ciphertext.data().poly_modulus_degree())
+        {
+            throw std::invalid_argument(".");    // 다항식 모듈러스 차수 is mismathed
+        }
+
         const EncryptionParameters& params = ciphertext.params();
         const uint64_t d = context_.poly_modulus_degree();
         const uint64_t l = params.l();
         const uint64_t q = params.q();
-        const uint64_t log_q = static_cast<uint64_t>(std::ceill(std::log2l(params.q())));
-        const uint64_t N = ciphertext.size() * log_q;
+        const uint64_t N = static_cast<uint64_t>(std::floor(std::log2(q))) + 1;
 
         // ct: 암호문 데이터. (3x1 poly matrix)
+        PolyMatrix ct = ciphertext.data();
+
+        // rk: 재선형화키. (Nx2 poly matrix)
+        const PolyMatrix& rk = relinkeys.data(l);
+
+        // D: t^2에 대응하는 암호문 비트. (1xN poly matrix)
+        PolyMatrix D;
+        D.assign(1, N, d, q);
+
+        for (size_t c = 0, bit = 1; c < N; c++, bit <<= 1)
+        { 
+            for (size_t i = 0; i < d; i++)
+            {
+                D.set(0, c, i, (ct.get(2, 0, i) & bit) ? 1 : 0);
+            }
+        }  
+
+        // ct_2: 재선형화가 완료된 암호문. (2x1 poly matrix)
+        ct.reset(2, 1, d, q);
+        destination.data(ct + (D * rk).t());
+        destination.params(params);
+    }
+
+    void Evaluator::key_switch(const Ciphertext& ciphertext, const SwitchKeys& switchkeys, Ciphertext& destination) const
+    {
+        if (ciphertext.size() != static_cast<size_t>(2))
+        {
+            throw std::invalid_argument(".");    // 오직 크기가 2인 암호문만 키스위칭이 가능합니다.
+        }
+
+        const EncryptionParameters& params = ciphertext.params();
+        const uint64_t d = context_.poly_modulus_degree();
+        const uint64_t l = params.l();
+        const uint64_t q = params.q();
+        const uint64_t log_q = static_cast<uint64_t>(std::floor(std::log2(q))) + 1;
+        const uint64_t N = ciphertext.size() * log_q;
         const PolyMatrix& ct = ciphertext.data();
 
         // D: 암호문 비트. (Nx1 poly matrix)
@@ -81,10 +122,10 @@ namespace fheprac
         }
 
         // rk: 재선형화키. (Nx2 poly matrix)
-        const PolyMatrix& rk = relinKeys.data(l);
+        const PolyMatrix& wk = switchkeys.data(l);
 
         // ct_2: 재선형화가 완료된 암호문. (2x1 poly matrix)
-        destination.data((D.t() * rk).t());
+        destination.data((D.t() * wk).t());
         destination.params(params);
     }
 

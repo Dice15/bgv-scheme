@@ -5,12 +5,12 @@
 
 namespace fheprac
 {
-	class RelinKeys
+	class SwitchKeys
 	{
 	public:
-		RelinKeys() = default;
+		SwitchKeys() = default;
 
-		RelinKeys(const size_t key_count);
+		SwitchKeys(const size_t key_count);
 
 		void assign(const size_t key_count);
 
@@ -22,6 +22,6 @@ namespace fheprac
 
 
 	private:
-		std::vector<PolyMatrix> rk_;   // enc(s x s)
+		std::vector<PolyMatrix> wk_;   // T_(s1 -> s2)
 	};
 }

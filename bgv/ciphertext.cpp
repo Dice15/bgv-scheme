@@ -16,7 +16,7 @@ namespace fheprac
 
 	void Ciphertext::reset(const size_t size, const Context& context, const EncryptionParameters& params)
 	{
-		ct_.assign(size, 1, context.poly_modulus_degree(), params.q());
+		ct_.reset(size, 1, context.poly_modulus_degree(), params.q());
 		params_ = params;
 	}
 

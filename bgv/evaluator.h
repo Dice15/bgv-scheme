@@ -2,6 +2,7 @@
 
 #include "context.h"
 #include "relinkeys.h"
+#include "switchkeys.h"
 #include "ciphertext.h"
 #include "plaintext.h"
 #include "encryptionparams.h"
@@ -15,7 +16,9 @@ namespace fheprac
 
 		void mod_switch(const Ciphertext& ciphertext, Ciphertext& destination) const;
 
-		void relinearize(const Ciphertext& ciphertext, const RelinKeys& relinKeys, Ciphertext& destination) const;
+		void relinearize(const Ciphertext& ciphertext, const RelinKeys& relinkeys, Ciphertext& destination) const;
+
+		void key_switch(const Ciphertext& ciphertext, const SwitchKeys& switchkeys, Ciphertext& destination) const;
 
 		void add(const Ciphertext& ciphertext1, const Ciphertext& ciphertext2, Ciphertext& destination) const;
 

@@ -28,6 +28,8 @@ namespace fheprac
 
 		void reset(const uint64_t poly_modulus_degree, const uint64_t modulus, const uint64_t value = 0);
 
+		void reset_unsafe(const uint64_t poly_modulus_degree, const uint64_t modulus, const uint64_t value = 0);
+
 		Polynomial operator+(const Polynomial& other) const;
 
 		void operator+=(const Polynomial& other);
